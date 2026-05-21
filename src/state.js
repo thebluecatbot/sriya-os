@@ -198,7 +198,28 @@ function schedulePersist() {
 function scheduleSync() {
   if (IS_GUEST) return; // guests don't sync
   if (_pendingSync) clearTimeout(_pendingSync);
-  _pendingSync = setTimeout(syncToNeon, 1500);
+  // Tightened to 800ms — fast enough that the next device sees the change
+  // within ~1s of the user lifting their finger.
+  _pendingSync = setTimeout(syncToNeon, 800);
+}
+
+// Flush any pending write immediately, e.g. before the tab closes
+export function flushSync() {
+  if (_pendingSync) { clearTimeout(_pendingSync); _pendingSync = null; }
+  syncToNeon();
+}
+
+// Beacon a final sync when the tab is being closed or hidden
+if (typeof window !== 'undefined') {
+  window.addEventListener('pagehide', () => {
+    try {
+      if (IS_GUEST || !_state) return;
+      const payload = JSON.stringify({ ns: NS, state: _state, ts: Date.now() });
+      // sendBeacon is fire-and-forget, won't be cancelled by navigation
+      if (navigator.sendBeacon) navigator.sendBeacon('/api/state', new Blob([payload], { type: 'application/json' }));
+    } catch {}
+  });
+  document.addEventListener('visibilitychange', () => { if (document.hidden) flushSync(); });
 }
 
 async function syncToNeon() {
