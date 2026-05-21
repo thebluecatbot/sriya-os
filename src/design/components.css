@@ -11,6 +11,7 @@ html {
   line-height: 1.5;
   -webkit-text-size-adjust: 100%;
   -webkit-tap-highlight-color: transparent;
+  overflow-x: hidden;
 }
 
 body {
@@ -18,8 +19,22 @@ body {
   color: var(--ink);
   min-height: 100dvh;
   overflow-x: hidden;
+  max-width: 100vw;
   padding-bottom: calc(72px + var(--safe-bottom));
 }
+
+/* Prevent overflow on long words/URLs across all text */
+h1, h2, h3, h4, p, span, strong, em, a, button { word-wrap: break-word; overflow-wrap: break-word; }
+h1, h2, h3, h4 { hyphens: auto; }
+
+/* Cards never break the viewport on mobile */
+.card { max-width: 100%; min-width: 0; overflow-wrap: break-word; }
+.row { min-width: 0; max-width: 100%; }
+.row > * { min-width: 0; }
+.stack > * { max-width: 100%; min-width: 0; }
+.view * { box-sizing: border-box; }
+.view { overflow-x: hidden; }
+input, textarea, select, .input, .select { max-width: 100%; box-sizing: border-box; }
 
 a { color: var(--primary-deep); text-decoration: none; }
 button { font: inherit; color: inherit; cursor: pointer; }
@@ -156,7 +171,9 @@ p { margin: 0 0 var(--space-3); }
   border-bottom: 1px solid var(--line);
   font-size: var(--fs-sm);
   z-index: 30;
+  overflow: hidden;
 }
+.activity-bar__label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; flex: 1; }
 .activity-bar[hidden] { display: none; }
 .activity-bar__dot {
   width: 8px; height: 8px; border-radius: 50%;
@@ -492,8 +509,15 @@ textarea.input { min-height: 96px; resize: vertical; }
   grid-template-columns: 1fr auto;
   gap: var(--space-2) var(--space-3);
   align-items: center;
+  min-width: 0;
 }
-.greeting h1 { font-size: var(--fs-3xl); margin: 0; }
+.greeting > * { min-width: 0; }
+.greeting h1 { font-size: var(--fs-3xl); margin: 0; word-break: break-word; line-height: 1.05; }
+@media (max-width: 380px) {
+  .greeting { grid-template-columns: 1fr; }
+  .greeting h1 { font-size: var(--fs-2xl); }
+  .clock { font-size: var(--fs-xl); }
+}
 .greeting time { font-size: var(--fs-xs); color: var(--ink-mute); font-variant-numeric: tabular-nums; }
 .clock { font-family: var(--font-display); font-style: italic; font-size: var(--fs-2xl); color: var(--ink-soft); }
 
@@ -511,8 +535,9 @@ textarea.input { min-height: 96px; resize: vertical; }
 }
 
 /* ─────────── Util ─────────── */
-.row { display: flex; align-items: center; gap: var(--space-2); }
+.row { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
 .row--between { justify-content: space-between; }
+.row--nowrap { flex-wrap: nowrap; }
 .stack > * + * { margin-top: var(--space-3); }
 .muted { color: var(--ink-mute); }
 .center { text-align: center; }
@@ -575,14 +600,26 @@ body[data-login="on"] { padding: 0 !important; }
   background: linear-gradient(160deg, #FFF8D6 0%, #FFE9A3 100%) !important;
   border-color: #E8B73E !important;
   box-shadow: 0 2px 8px rgba(232, 183, 62, 0.18) !important;
+  color: #2A1F08 !important;
 }
+/* Cascade dark text to every child so midnight/dark themes don't leave
+   white text floating on yellow. */
+[data-added-by="prakhar"] *:not(input):not(textarea):not(select):not(button):not(.chip--primary) {
+  color: #2A1F08 !important;
+}
+[data-added-by="prakhar"] .muted,
+[data-added-by="prakhar"] .check__meta { color: #5C4A18 !important; }
+[data-added-by="prakhar"] strong { color: #1A1208 !important; }
+[data-added-by="prakhar"] input,
+[data-added-by="prakhar"] textarea,
+[data-added-by="prakhar"] select { color: var(--ink); background: var(--surface); }
 [data-added-by="prakhar"]::before {
   content: "🐝 prakhar";
   display: inline-block;
   font-size: 0.65rem;
   font-weight: 600;
   background: #F5C945;
-  color: #5C3D10;
+  color: #5C3D10 !important;
   padding: 1px 6px;
   border-radius: 999px;
   margin-bottom: 4px;
