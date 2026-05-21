@@ -239,9 +239,63 @@ function addSwipe() {
 // ─── Piece editor ───
 let autosaveTimer = null;
 
+// Persistent input elements per-piece so re-paints don't wipe focus or value
+// (same trick used in the journal entry-draft).
+const _pieceInputs = new Map(); // pieceId → { title, body, outline, savedHint }
+
+function getPieceInputs(p) {
+  let bag = _pieceInputs.get(p.id);
+  if (bag) return bag;
+
+  const title = el('input', {
+    class: 'input', type: 'text', value: p.title || '',
+    placeholder: 'piece title (type freely · autosaves)',
+    'aria-label': 'Piece title',
+    autocapitalize: 'sentences', autocomplete: 'off', spellcheck: 'true',
+    style: { fontFamily: 'var(--font-display)', fontSize: '1.5rem', fontStyle: 'italic', marginTop: '8px' },
+  });
+  const body = el('textarea', {
+    class: 'input', rows: 18, value: p.body || '', spellcheck: 'true', 'aria-label': 'Draft body',
+    style: { fontFamily: 'var(--font-body)', fontSize: '1rem', lineHeight: '1.6' },
+  });
+  const outline = el('textarea', {
+    class: 'input', rows: 10, value: p.outline || '',
+    placeholder: '- hook\n- 3 main beats\n- close\n- CTA',
+    'aria-label': 'Outline',
+  });
+  const savedHint = el('span', { class: 'muted', style: { fontSize: '0.7rem' } }, 'autosaved ✓');
+
+  // Autosave each field with silent state updates (no notify → no re-paint loop).
+  const debounceSave = (mutate) => {
+    if (autosaveTimer) clearTimeout(autosaveTimer);
+    savedHint.textContent = 'saving…';
+    autosaveTimer = setTimeout(() => {
+      update((d) => {
+        const x = d.substack.pieces.find((y) => y.id === p.id);
+        if (x) mutate(x);
+      }, { silent: true });
+      savedHint.textContent = 'autosaved ✓';
+    }, 350);
+  };
+  title.addEventListener('input',   () => debounceSave((x) => { x.title = title.value; }));
+  body.addEventListener('input',    () => debounceSave((x) => { x.body = body.value; }));
+  outline.addEventListener('input', () => debounceSave((x) => { x.outline = outline.value; }));
+
+  bag = { title, body, outline, savedHint };
+  _pieceInputs.set(p.id, bag);
+  return bag;
+}
+
 function pieceEditor(s, id) {
   const p = (s.substack.pieces || []).find((x) => x.id === id);
   if (!p) { activePieceId = null; rePaint(); return el('div'); }
+
+  const inputs = getPieceInputs(p);
+  // If state was updated externally and the value drifted, reconcile · but only
+  // when the user isn't actively editing (i.e., field not focused).
+  if (document.activeElement !== inputs.title  && inputs.title.value  !== (p.title  || '')) inputs.title.value  = p.title  || '';
+  if (document.activeElement !== inputs.body   && inputs.body.value   !== (p.body   || '')) inputs.body.value   = p.body   || '';
+  if (document.activeElement !== inputs.outline&& inputs.outline.value!== (p.outline|| '')) inputs.outline.value= p.outline|| '';
 
   const wrap = el('div', { class: 'stack' });
 
@@ -254,13 +308,8 @@ function pieceEditor(s, id) {
         onChange: (e) => moveStage(p.id, e.target.value),
       }, STAGES.map((st) => el('option', { value: st, selected: p.stage === st }, st))),
     ]),
-    el('input', {
-      class: 'input', value: p.title, style: { fontFamily: 'var(--font-display)', fontSize: '1.5rem', fontStyle: 'italic', marginTop: '8px' },
-      onInput: (e) => update((d) => {
-        const x = d.substack.pieces.find((y) => y.id === p.id);
-        if (x) x.title = e.target.value;
-      }),
-    }),
+    inputs.title,
+    el('div', { style: { marginTop: '6px' } }, [inputs.savedHint]),
   ]));
 
   // Sub-tabs
@@ -288,10 +337,8 @@ function pieceEditor(s, id) {
 
 // Body · main editor with autosave + word count + reading time + copy markdown
 function bodyTab(p) {
-  const ta = el('textarea', {
-    class: 'input', rows: 18, value: p.body || '', spellcheck: 'true', 'aria-label': 'Draft body',
-    style: { fontFamily: 'var(--font-body)', fontSize: '1rem', lineHeight: '1.6' },
-  });
+  const inputs = getPieceInputs(p);
+  const ta = inputs.body;
 
   const wordsEl = el('span', { class: 'muted', style: { fontSize: '0.75rem' } }, '0 words · 0 min read');
 
@@ -302,16 +349,8 @@ function bodyTab(p) {
   }
   updateWords();
 
-  ta.addEventListener('input', () => {
-    updateWords();
-    if (autosaveTimer) clearTimeout(autosaveTimer);
-    autosaveTimer = setTimeout(() => {
-      update((d) => {
-        const x = d.substack.pieces.find((y) => y.id === p.id);
-        if (x) x.body = ta.value;
-      });
-    }, 600);
-  });
+  // Refresh word count on every keystroke (no duplicate save listener)
+  ta.addEventListener('input', updateWords);
 
   function snapshot() {
     update((d) => {
@@ -351,15 +390,8 @@ function bodyTab(p) {
 }
 
 function outlineTab(p) {
-  const ta = el('textarea', { class: 'input', rows: 10, value: p.outline || '',
-    placeholder: '- hook\n- 3 main beats\n- close\n- CTA' });
-  ta.addEventListener('input', () => {
-    if (autosaveTimer) clearTimeout(autosaveTimer);
-    autosaveTimer = setTimeout(() => update((d) => {
-      const x = d.substack.pieces.find((y) => y.id === p.id);
-      if (x) x.outline = ta.value;
-    }), 400);
-  });
+  const inputs = getPieceInputs(p);
+  const ta = inputs.outline;
   return el('div', { class: 'card' }, [
     el('div', { class: 'card__title' }, [el('i', { class: 'ph-duotone ph-list-numbers' }), 'outline']),
     ta,

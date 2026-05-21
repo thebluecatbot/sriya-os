@@ -138,14 +138,68 @@ let _state = null;
 let _pendingPersist = null;
 let _pendingSync = null;
 
+// Deep merge that UNIONS arrays of objects by their `id` field.
+// Keyed-object structures (tickLog, byDate, mainThingByDate) are still merged
+// as plain objects — the keys themselves are the identifiers there.
 function deepMerge(a, b) {
-  if (Array.isArray(a) || Array.isArray(b)) return b ?? a;
+  // Both arrays · union by id, newer wins on conflict
+  if (Array.isArray(a) && Array.isArray(b)) {
+    return unionArraysById(a, b);
+  }
+  // One is array, other missing · take whichever exists (prefer b)
+  if (Array.isArray(a) || Array.isArray(b)) {
+    return b ?? a;
+  }
+  // Both objects · recurse on union of keys
   if (a && typeof a === 'object' && b && typeof b === 'object') {
     const out = { ...a };
     for (const k of Object.keys(b)) out[k] = deepMerge(a[k], b[k]);
     return out;
   }
+  // Primitives · b wins unless undefined
   return b === undefined ? a : b;
+}
+
+// Pick the latest known timestamp on an item (createdAt / completedAt / etc).
+function itemTimestamp(item) {
+  if (!item || typeof item !== 'object') return 0;
+  const candidates = [item.updatedAt, item.editedAt, item.completedAt,
+                      item.modifiedAt, item.at, item.time, item.createdAt, item.date];
+  for (const c of candidates) {
+    if (!c) continue;
+    const ts = Date.parse(c);
+    if (Number.isFinite(ts)) return ts;
+  }
+  return 0;
+}
+
+// Union of two arrays of objects keyed by `id`. Newer wins where both have
+// the same id. Arrays whose items have no `id` fall back to old behaviour.
+function unionArraysById(a, b) {
+  const aIdable = a.some((x) => x && typeof x === 'object' && 'id' in x);
+  const bIdable = b.some((x) => x && typeof x === 'object' && 'id' in x);
+  if (!aIdable && !bIdable) return b ?? a;
+
+  const byId = new Map();
+  const orphans = [];
+  const pushItem = (item, side) => {
+    if (item && typeof item === 'object' && 'id' in item) {
+      const existing = byId.get(item.id);
+      if (!existing) {
+        byId.set(item.id, item);
+      } else {
+        // Pick newer by timestamp; tie · prefer b (later-arriving) for deterministic merge.
+        const tA = itemTimestamp(existing);
+        const tB = itemTimestamp(item);
+        byId.set(item.id, tB >= tA ? item : existing);
+      }
+    } else {
+      orphans.push(item);
+    }
+  };
+  for (const item of a) pushItem(item, 'a');
+  for (const item of b) pushItem(item, 'b');
+  return [...byId.values(), ...orphans];
 }
 
 function loadLocal() {
@@ -227,17 +281,91 @@ if (typeof window !== 'undefined') {
   document.addEventListener('visibilitychange', () => { if (document.hidden) flushSync(); });
 }
 
+// Single-flight guard · prevents concurrent merge-then-write loops.
+let _isSyncing = false;
+// Snapshot of last-pushed body so we don't echo identical writes.
+let _lastPushedJSON = '';
+
 async function syncToNeon() {
   _pendingSync = null;
   if (!navigator.onLine) return;
+  if (_isSyncing) return;
+  _isSyncing = true;
   try {
+    // Merge-before-write: pull remote, union with local, then push the union.
+    // This is what prevents "user A overwrites user B" data loss.
+    const remote = await loadFromNeon();
+    if (remote) {
+      const merged = deepMerge(_state, remote);
+      const before = JSON.stringify(_state);
+      const after = JSON.stringify(merged);
+      if (before !== after) {
+        _state = merged;
+        // Keep updatedAt as max of both sides (or now, if we are publishing)
+        const lTs = Date.parse(before && JSON.parse(before).updatedAt || 0) || 0;
+        const rTs = Date.parse(remote.updatedAt || 0) || 0;
+        _state.updatedAt = new Date(Math.max(lTs, rTs, Date.now())).toISOString();
+        saveLocal(_state);
+        notify();
+      }
+    }
+    // Skip the POST if nothing has actually changed since last push.
+    const payloadBody = JSON.stringify({ ns: NS, state: _state, ts: Date.now() });
+    const stateOnly = JSON.stringify(_state);
+    if (stateOnly === _lastPushedJSON) return;
+
     const res = await fetch('/api/state', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ ns: NS, state: _state, ts: Date.now() }),
+      body: payloadBody,
     });
-    if (!res.ok) console.warn('state: sync POST failed', res.status);
-  } catch (e) { /* offline · keep going */ }
+    if (!res.ok) console.warn('[sync] POST failed', res.status);
+    else _lastPushedJSON = stateOnly;
+  } catch (e) {
+    console.warn('[sync] write error', e?.message || e);
+  } finally {
+    _isSyncing = false;
+  }
+}
+
+// Background pull: every 25s while tab is visible + online + init done.
+// Merges remote into local. Does NOT scheduleSync (no echo loops).
+let _pullInterval = null;
+function startPeriodicPull() {
+  stopPeriodicPull();
+  if (IS_GUEST) return;
+  _pullInterval = setInterval(async () => {
+    if (document.visibilityState !== 'visible') return;
+    if (!navigator.onLine) return;
+    if (!_initialMergeDone) return;
+    if (_isSyncing) return;
+    try {
+      const remote = await loadFromNeon();
+      if (!remote) return;
+      const merged = deepMerge(_state, remote);
+      const before = JSON.stringify(_state);
+      const after = JSON.stringify(merged);
+      if (before === after) return; // nothing new from remote · no loop
+      _state = merged;
+      const lTs = Date.parse(JSON.parse(before).updatedAt || 0) || 0;
+      const rTs = Date.parse(remote.updatedAt || 0) || 0;
+      _state.updatedAt = new Date(Math.max(lTs, rTs)).toISOString();
+      saveLocal(_state);
+      notify();
+      // Remember we've effectively "received" this · prevents redundant push echo.
+      _lastPushedJSON = JSON.stringify(_state);
+      console.log('[sync] background pull merged remote changes');
+    } catch (e) { /* offline / timeout · ignore */ }
+  }, 25_000);
+}
+function stopPeriodicPull() {
+  if (_pullInterval) { clearInterval(_pullInterval); _pullInterval = null; }
+}
+if (typeof document !== 'undefined') {
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') startPeriodicPull();
+    else stopPeriodicPull();
+  });
 }
 
 async function loadFromNeon() {
@@ -286,6 +414,7 @@ export async function initState() {
     console.warn('[sync] init timed out · opening gate (will reconcile later)');
     _initialMergeDone = true;
     flushSyncQueueIfAny();
+    startPeriodicPull();
   }, 7000);
 
   loadFromNeon().then((remote) => {
@@ -310,11 +439,13 @@ export async function initState() {
     }
     _initialMergeDone = true;
     flushSyncQueueIfAny();
+    startPeriodicPull();
   }).catch((e) => {
     clearTimeout(safetyOpen);
     console.warn('[sync] init load errored', e);
     _initialMergeDone = true;
     flushSyncQueueIfAny();
+    startPeriodicPull();
   });
 
   return _state;

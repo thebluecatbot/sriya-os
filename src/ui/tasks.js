@@ -259,6 +259,14 @@ function taskCard(t, s) {
     if (p) meta.appendChild(el('span', { class: 'chip',
       style: { background: 'transparent', borderColor: p.color, color: p.color } }, `${p.emoji} ${p.name}`));
   }
+  if (t.personAdhoc) {
+    meta.appendChild(el('span', { class: 'chip',
+      style: { background: 'transparent', borderColor: 'var(--primary)', color: 'var(--primary-deep)' } },
+      [el('i', { class: 'ph ph-user' }), ' ', t.personAdhoc]));
+  }
+  if (t.tag) {
+    meta.appendChild(el('span', { class: 'chip chip--primary' }, `· ${t.tag}`));
+  }
   if (meta.children.length) body.appendChild(meta);
 
   // Subtasks (collapsed)
@@ -453,8 +461,38 @@ export function openEditSheet(existing) {
     el('option', { value: v, selected: t.priority === v }, l)));
   const fEnergy = el('select', { class: 'select' }, [['light','light'], ['heavy','heavy']].map(([v, l]) =>
     el('option', { value: v, selected: t.energy === v }, l)));
-  const fPerson = el('select', { class: 'select' }, s.people.map((p) =>
-    el('option', { value: p.id, selected: t.person === p.id }, `${p.emoji} ${p.name}`)));
+  // Person picker: existing People + a custom "ad-hoc" entry that stays on the
+  // task only (doesn't pollute the People list permanently).
+  const personOpts = [
+    ...s.people.map((p) => ({ value: p.id, label: `${p.emoji} ${p.name}` })),
+    { value: '__custom__', label: '+ someone else (just this task)' },
+  ];
+  const fPerson = el('select', { class: 'select' }, personOpts.map((o) =>
+    el('option', { value: o.value, selected: (t.personAdhoc ? '__custom__' : t.person) === o.value }, o.label)));
+  const fPersonAdhoc = el('input', {
+    class: 'input',
+    value: t.personAdhoc || '',
+    placeholder: 'name (just on this task)',
+    style: { display: t.personAdhoc ? '' : 'none' },
+  });
+  fPerson.addEventListener('change', () => {
+    fPersonAdhoc.style.display = fPerson.value === '__custom__' ? '' : 'none';
+    if (fPerson.value === '__custom__' && !fPersonAdhoc.value) fPersonAdhoc.focus();
+  });
+
+  // Free-text optional category tag (work / study / fun / "anything"…)
+  // Suggests previously-used categories from existing tasks for quick re-use.
+  const seenCategories = [...new Set((s.tasks.negotiable || [])
+    .map((x) => x.tag).filter(Boolean))].slice(0, 8);
+  const fTag = el('input', {
+    class: 'input', value: t.tag || '',
+    placeholder: 'category (optional · e.g. work, study, fun)',
+    list: 'task-tag-suggestions',
+  });
+  const fTagList = el('datalist', { id: 'task-tag-suggestions' },
+    seenCategories.map((c) => el('option', { value: c }))
+  );
+
   const fCompletion = el('input', { class: 'input', type: 'number', min: 5, step: 5, value: t.completionTimerMins || '', placeholder: 'finish-by (min)' });
   const fScheduled = el('input', { class: 'input', type: 'datetime-local', value: t.scheduledAt ? t.scheduledAt.slice(0, 16) : '' });
 
@@ -489,6 +527,10 @@ export function openEditSheet(existing) {
     el('div', { class: 'row', style: { gap: '6px', flexWrap: 'wrap' } }, [
       labeled('energy', fEnergy),
       labeled('with', fPerson),
+    ]),
+    fPersonAdhoc, fTagList,
+    el('div', { class: 'row', style: { gap: '6px', flexWrap: 'wrap' } }, [
+      labeled('category (optional)', fTag),
     ]),
     el('div', { class: 'row', style: { gap: '6px', flexWrap: 'wrap' } }, [
       labeled('schedule (date+time)', fScheduled),
@@ -527,7 +569,15 @@ export function openEditSheet(existing) {
         t.priority = fPriority.value;
         t.due = fDue.value;
         t.energy = fEnergy.value;
-        t.person = fPerson.value;
+        // Person: either an existing People id, or an ad-hoc name kept only on this task
+        if (fPerson.value === '__custom__') {
+          t.personAdhoc = fPersonAdhoc.value.trim();
+          t.person = 'sriya'; // primary fallback
+        } else {
+          t.person = fPerson.value;
+          t.personAdhoc = null;
+        }
+        t.tag = fTag.value.trim() || null;
         const est = parseInt(fEst.value, 10);
         t.estMins = Number.isFinite(est) && est > 0 ? est : null;
         const ct = parseInt(fCompletion.value, 10);
