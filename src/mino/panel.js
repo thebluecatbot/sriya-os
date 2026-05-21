@@ -5,6 +5,7 @@ import { getState, update, TODAY } from '../state.js';
 import { say } from './voice.js';
 import { snoozeMino, nextAction } from './mascot.js';
 import { todayKey, dayPart } from '../utils/format.js';
+import { pushSupported, getStatus, subscribeMino, unsubscribeMino, showLocalTest } from '../utils/push.js';
 
 export function openMinoPanel() {
   const sheet = openSheet(renderPanel, { title: 'Mino ♡' });
@@ -75,6 +76,9 @@ function renderPanel() {
   // Chat (Gemini-backed via /api/mino-chat; falls back to pattern phrases if offline)
   wrap.appendChild(chatBlock());
 
+  // Real check-ins (6x/day Web Push)
+  wrap.appendChild(checkinsBlock());
+
   // Wardrobe (reward unlocks)
   wrap.appendChild(wardrobeBlock());
 
@@ -82,6 +86,86 @@ function renderPanel() {
   wrap.appendChild(controlsBlock());
 
   return wrap;
+}
+
+function checkinsBlock() {
+  const card = el('div', { class: 'card' });
+  const statusLine = el('p', { class: 'muted', style: { margin: '0 0 8px' } }, 'checking…');
+
+  const enableBtn = el('button', { class: 'btn btn--block', type: 'button' }, [
+    el('i', { class: 'ph-fill ph-bell-ringing', 'aria-hidden': 'true', style: { marginRight: '6px' } }),
+    'turn on check-ins (6 a day)'
+  ]);
+
+  const disableBtn = el('button', { class: 'btn btn--soft', type: 'button' }, 'turn off');
+  const testBtn    = el('button', { class: 'btn btn--soft', type: 'button' }, 'send test ping');
+
+  const row = el('div', { class: 'row', style: { gap: '8px', flexWrap: 'wrap', marginTop: '8px' } });
+
+  async function refresh() {
+    if (!pushSupported()) {
+      statusLine.textContent = 'this browser does not support push · install the PWA on Android for best results';
+      enableBtn.disabled = true; disableBtn.disabled = true; testBtn.disabled = true;
+      return;
+    }
+    try {
+      const st = await getStatus();
+      const onShelf = st.subscribed && st.permission === 'granted';
+      statusLine.textContent = onShelf
+        ? 'on ♡ · Mino pings you 6 times a day (every 4 hours, IST)'
+        : (st.permission === 'denied'
+            ? 'permission was denied in browser settings · open browser site-settings to allow'
+            : 'off · tap below to let Mino check in on you');
+      row.innerHTML = '';
+      if (onShelf) {
+        row.appendChild(testBtn);
+        row.appendChild(disableBtn);
+      } else {
+        row.appendChild(enableBtn);
+        row.appendChild(testBtn);
+      }
+    } catch (e) {
+      statusLine.textContent = 'could not check status · ' + (e.message || 'error');
+    }
+  }
+
+  enableBtn.addEventListener('click', async () => {
+    enableBtn.disabled = true; enableBtn.textContent = 'asking permission…';
+    try {
+      await subscribeMino();
+      toast('check-ins on ♡');
+      try { await showLocalTest('hi ✿ check-ins are on. i will say hi every 4 hours.'); } catch {}
+    } catch (e) {
+      toast('couldn\'t turn on · ' + (e.message || 'error'));
+    } finally {
+      enableBtn.disabled = false; enableBtn.textContent = 'turn on check-ins (6 a day)';
+      refresh();
+    }
+  });
+
+  disableBtn.addEventListener('click', async () => {
+    disableBtn.disabled = true;
+    try { await unsubscribeMino(); toast('check-ins off'); }
+    catch (e) { toast('couldn\'t turn off · ' + (e.message || 'error')); }
+    finally { disableBtn.disabled = false; refresh(); }
+  });
+
+  testBtn.addEventListener('click', async () => {
+    try { await showLocalTest(); }
+    catch (e) { toast('couldn\'t show · ' + (e.message || 'error')); }
+  });
+
+  card.appendChild(el('div', { class: 'card__title' }, [
+    el('i', { class: 'ph-duotone ph-bell-simple-ringing', 'aria-hidden': 'true' }),
+    'real check-ins', el('small', null, '6 a day · even when app is closed')
+  ]));
+  card.appendChild(statusLine);
+  card.appendChild(row);
+  card.appendChild(el('p', { class: 'muted', style: { fontSize: '0.7rem', margin: '8px 0 0' } },
+    'on Android: install the app first (More → install). on iPhone: add to Home Screen (Safari share menu) · iOS only sends push to installed PWAs.'));
+
+  refresh();
+  return card;
 }
 
 function wardrobeBlock() {

@@ -1,0 +1,34 @@
+name: mino-checkin-cron
+
+# Pings /api/mino-cron 6 times a day at IST 00, 04, 08, 12, 16, 20.
+# GitHub Actions cron is always UTC. IST = UTC + 5:30, so we run at
+# UTC :30 of the matching hours.  Equivalent UTC slots:
+#   IST 00:00 → UTC 18:30 (prev day)
+#   IST 04:00 → UTC 22:30 (prev day)
+#   IST 08:00 → UTC 02:30
+#   IST 12:00 → UTC 06:30
+#   IST 16:00 → UTC 10:30
+#   IST 20:00 → UTC 14:30
+
+on:
+  schedule:
+    - cron: '30 2,6,10,14,18,22 * * *'
+  workflow_dispatch:    # allow manual "test ping" from the Actions tab
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: ping mino-cron endpoint
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          set -e
+          if [ -z "$CRON_SECRET" ]; then
+            echo "CRON_SECRET is not set in repo secrets"; exit 1
+          fi
+          curl -fsS -X POST https://sriya-os.vercel.app/api/mino-cron \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            -H "Content-Type: application/json" \
+            --max-time 60
+          echo

@@ -1,7 +1,7 @@
 // Sriya's webOS — service worker
 // Offline-first for the shell; network-first for state APIs.
 
-const VERSION = 'sriya-v10-2026-05-22-merge-sync';
+const VERSION = 'sriya-v11-2026-05-22-mino-push';
 const SHELL_CACHE = `${VERSION}-shell`;
 const RUNTIME_CACHE = `${VERSION}-runtime`;
 
@@ -28,7 +28,8 @@ const SHELL_ASSETS = [
   '/src/mino/panel.js',
   '/src/mino/voice.js',
   '/src/utils/dom.js',
-  '/src/utils/format.js'
+  '/src/utils/format.js',
+  '/src/utils/push.js'
 ];
 
 self.addEventListener('install', (event) => {
@@ -95,4 +96,39 @@ self.addEventListener('fetch', (event) => {
 
 self.addEventListener('message', (event) => {
   if (event.data === 'skip-waiting') self.skipWaiting();
+});
+
+// ----- Web Push: Mino check-ins ----- //
+
+self.addEventListener('push', (event) => {
+  let payload = {};
+  try { payload = event.data ? event.data.json() : {}; } catch { payload = { body: event.data?.text?.() || '' }; }
+  const title = payload.title || 'mino ✿';
+  const body  = payload.body  || 'hi ♡';
+  const tag   = payload.tag   || 'mino-checkin';
+  const data  = payload.data  || { url: '/#/mino' };
+  event.waitUntil(self.registration.showNotification(title, {
+    body,
+    tag,
+    renotify: payload.renotify !== false,
+    icon: payload.icon  || '/icons/icon-192.svg',
+    badge: payload.badge || '/icons/icon-192.svg',
+    vibrate: [80, 40, 80],
+    data,
+  }));
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const target = event.notification.data?.url || '/#/mino';
+  event.waitUntil((async () => {
+    const all = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    for (const client of all) {
+      if (client.url.includes(self.location.origin)) {
+        try { await client.navigate(new URL(target, self.location.origin).toString()); } catch {}
+        return client.focus();
+      }
+    }
+    return self.clients.openWindow(target);
+  })());
 });

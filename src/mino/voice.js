@@ -103,6 +103,48 @@ const POOL = {
     'i am here',
     'hii ✿',
   ],
+
+  // Warm "thought of you" check-ins · used by Mino push pings + chatty mode.
+  checkin_open: [
+    'hi ✿ how are you doing?',
+    'hey kanna, how are you really?',
+    'thought of you · all okay?',
+    'just checking in ♡',
+    'kya haal hai? quick hello',
+    'inka ela undi nuvvu?',
+    'paused for you · what is the mood?',
+    'hi · brain on or off today?',
+  ],
+  checkin_morning: [
+    'uth gayi? gentle hi',
+    'morning · how was the sleep?',
+    'hi ✿ how is the brain today?',
+    'subah ho gayi · slow into it',
+    'inka ela undi? good morning kanna',
+  ],
+  checkin_midday: [
+    'midday hi · water ka glass?',
+    'khaana khaaya? thought of you',
+    'half-day vibe · how is it going?',
+    'bhojanam aithyenda?',
+  ],
+  checkin_afternoon: [
+    'afternoon · how are you really?',
+    'just here · how is the body?',
+    'shaam aane wali hai · how is the mood?',
+  ],
+  checkin_evening: [
+    'evening, friend ✿ how was it?',
+    'how was the day actually?',
+    'wind-down time · all okay?',
+    'roju ela jariginchav?',
+  ],
+  checkin_night: [
+    'still up? all good?',
+    'late ho gayi · how are you doing?',
+    'thought of you · lights low please',
+    'one more breath, then soja ♡',
+  ],
 };
 
 export function say(key, ctx = {}) {

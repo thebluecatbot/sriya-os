@@ -42,6 +42,7 @@ function defaults() {
       checkins: [],             // {date, part, prompt, answered}
       unlocks: ['default'],
       lastSuggestionAt: null,
+      pushEnabled: false,       // set true once the Web Push subscription is registered
     },
     tasks: {
       negotiable: [],           // see §16

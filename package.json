@@ -9,7 +9,8 @@
     "deploy:prod": "vercel deploy --prod"
   },
   "dependencies": {
-    "postgres": "^3.4.9"
+    "postgres": "^3.4.9",
+    "web-push": "^3.6.7"
   },
   "engines": {
     "node": ">=20"
