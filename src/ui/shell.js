@@ -164,8 +164,5 @@ function openMoreDrawer() {
       ]))
     ));
   });
-  wrap.appendChild(el('button', { class: 'btn btn--ghost btn--block',
-    onClick: () => { closeSheet(); import('./search.js').then((s) => s.openSearch()); } },
-    [el('i', { class: 'ph ph-magnifying-glass' }), ' search everything']));
   openSheet(wrap, { title: 'all modules' });
 }
