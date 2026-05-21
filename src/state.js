@@ -243,16 +243,22 @@ async function syncToNeon() {
 async function loadFromNeon() {
   if (IS_GUEST) return null;
   if (!navigator.onLine) return null;
+  // Hard 6s timeout so login never freezes if the API cold-starts slowly.
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), 6000);
   try {
-    const res = await fetch(`/api/state?ns=${encodeURIComponent(NS)}`, { cache: 'no-store' });
+    const res = await fetch(`/api/state?ns=${encodeURIComponent(NS)}`, { cache: 'no-store', signal: ctrl.signal });
+    clearTimeout(t);
     if (!res.ok) return null;
     const data = await res.json();
     if (data && data.state && typeof data.state === 'object') {
-      // Tag remote state with the server-side updated_at so merge is honest.
       if (data.updatedAt && !data.state.updatedAt) data.state.updatedAt = data.updatedAt;
       return data.state;
     }
-  } catch (e) { /* offline or 404 · fine */ }
+  } catch (e) {
+    clearTimeout(t);
+    console.warn('[sync] loadFromNeon failed:', e?.message || e);
+  }
   return null;
 }
 
@@ -266,34 +272,56 @@ let _initialMergeDone = false;
 const _syncQueue = [];
 
 export async function initState() {
+  // 1) Load local instantly so the UI can paint right away (never freeze).
   const local = loadLocal();
-  let remote = null;
-  try { remote = await loadFromNeon(); }
-  catch (e) { console.warn('[sync] initial load failed', e); }
-
-  const lTs = Date.parse(local?.updatedAt || local?.lastTouched || 0) || 0;
-  const rTs = Date.parse(remote?.updatedAt || remote?.lastTouched || 0) || 0;
-  let pickedFrom = 'defaults';
-  if (remote && local) {
-    if (rTs >= lTs) { _state = deepMerge(defaults(), remote); pickedFrom = 'remote (newer)'; }
-    else            { _state = deepMerge(defaults(), local);  pickedFrom = 'local (newer)'; }
-  } else if (remote) { _state = deepMerge(defaults(), remote); pickedFrom = 'remote (only)'; }
-  else if (local)    { _state = deepMerge(defaults(), local);  pickedFrom = 'local (only)'; }
-  else               { _state = defaults();                    pickedFrom = 'defaults'; }
-
-  console.log(`[sync] init · picked ${pickedFrom} · lTs=${lTs} rTs=${rTs} tasks=${_state?.tasks?.negotiable?.length || 0}`);
-
+  _state = local ? deepMerge(defaults(), local) : defaults();
+  const lTs0 = Date.parse(local?.updatedAt || local?.lastTouched || 0) || 0;
   notify();
-  // Open the sync gate. Any updates queued during init now flush.
-  _initialMergeDone = true;
-  if (_syncQueue.length > 0) { _syncQueue.length = 0; scheduleSync(); }
 
-  // If local was strictly newer than remote, push it up to overwrite.
-  if (local && rTs > 0 && lTs > rTs) {
-    console.log('[sync] local newer · pushing up');
-    scheduleSync();
-  }
+  // 2) Pull from remote in the background. The sync gate stays closed until
+  //    this resolves OR the safety timeout fires, so any auto-stamped local
+  //    update can't race to overwrite remote with an empty defaults.
+  const safetyOpen = setTimeout(() => {
+    if (_initialMergeDone) return;
+    console.warn('[sync] init timed out · opening gate (will reconcile later)');
+    _initialMergeDone = true;
+    flushSyncQueueIfAny();
+  }, 7000);
+
+  loadFromNeon().then((remote) => {
+    clearTimeout(safetyOpen);
+    if (remote) {
+      const rTs = Date.parse(remote.updatedAt || remote.lastTouched || 0) || 0;
+      // Take remote when it's at least as new as the local we already loaded.
+      if (rTs >= lTs0) {
+        _state = deepMerge(defaults(), remote);
+        saveLocal(_state);
+        notify();
+        console.log(`[sync] merged remote · tasks=${_state.tasks?.negotiable?.length || 0}`);
+      } else {
+        console.log('[sync] local newer · pushing up');
+        _initialMergeDone = true;
+        scheduleSync();
+        flushSyncQueueIfAny();
+        return;
+      }
+    } else {
+      console.log('[sync] no remote · keeping local');
+    }
+    _initialMergeDone = true;
+    flushSyncQueueIfAny();
+  }).catch((e) => {
+    clearTimeout(safetyOpen);
+    console.warn('[sync] init load errored', e);
+    _initialMergeDone = true;
+    flushSyncQueueIfAny();
+  });
+
   return _state;
+}
+
+function flushSyncQueueIfAny() {
+  if (_syncQueue.length > 0) { _syncQueue.length = 0; scheduleSync(); }
 }
 
 // Manual sync trigger — exposed for a "sync now" button in Me
