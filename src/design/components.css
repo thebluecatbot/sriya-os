@@ -1,4 +1,4 @@
-/* sriya — component primitives */
+/* sriya · component primitives */
 
 *, *::before, *::after { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; }
@@ -205,7 +205,7 @@ p { margin: 0 0 var(--space-3); }
 .nav__icon { font-size: 1.5rem; line-height: 1; color: var(--ink-mute); transition: color var(--dur) var(--ease); }
 .nav__tab.is-active .nav__icon { color: var(--primary); }
 
-/* Phosphor icon defaults — soft, feminine, pink-tinted by default */
+/* Phosphor icon defaults · soft, feminine, pink-tinted by default */
 [class^="ph-"], [class*=" ph-"] {
   display: inline-block;
   vertical-align: middle;
@@ -519,13 +519,76 @@ textarea.input { min-height: 96px; resize: vertical; }
 .hidden { display: none !important; }
 .tap-target { min-width: 44px; min-height: 44px; }
 
-/* Focus mode — hide noise */
+/* Focus mode · hide noise */
 body[data-focus="on"] #mino-root,
 body[data-focus="on"] #capture-fab,
 body[data-focus="on"] #activity-bar { display: none !important; }
 body[data-focus="on"] .petals { opacity: 0.25; }
 
-/* Gate screen — calm petals further, hide Mino */
+/* Login gate · hides chrome, centers card */
+body[data-login="on"] #mino-root,
+body[data-login="on"] #capture-fab,
+body[data-login="on"] #activity-bar,
+body[data-login="on"] #nav,
+body[data-login="on"] #sidebar { display: none !important; }
+body[data-login="on"] .view { padding: 0; max-width: none; }
+body[data-login="on"] { padding: 0 !important; }
+
+.login-wrap {
+  min-height: 100dvh;
+  display: flex; align-items: center; justify-content: center;
+  padding: var(--space-5);
+  background: var(--gradient-hero);
+}
+.login-card {
+  width: 100%;
+  max-width: 360px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-3);
+  padding: var(--space-6) var(--space-5);
+  text-align: center;
+}
+.login-logo {
+  font-size: 2.5rem;
+  color: var(--primary);
+  margin-bottom: var(--space-2);
+}
+.login-title {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 2rem;
+  color: var(--primary-deep);
+  margin: 0 0 4px;
+}
+.login-sub {
+  color: var(--ink-mute);
+  font-size: var(--fs-sm);
+  margin: 0 0 var(--space-5);
+}
+.login-card .field { text-align: left; }
+.login-hint { font-size: 0.7rem; margin-top: var(--space-3); }
+
+/* Items added by Prakhar · soft yellow card highlight (no shame, just visibility) */
+[data-added-by="prakhar"] {
+  background: linear-gradient(160deg, #FFF8D6 0%, #FFE9A3 100%) !important;
+  border-color: #E8B73E !important;
+  box-shadow: 0 2px 8px rgba(232, 183, 62, 0.18) !important;
+}
+[data-added-by="prakhar"]::before {
+  content: "🐝 prakhar";
+  display: inline-block;
+  font-size: 0.65rem;
+  font-weight: 600;
+  background: #F5C945;
+  color: #5C3D10;
+  padding: 1px 6px;
+  border-radius: 999px;
+  margin-bottom: 4px;
+}
+
+/* Gate screen · calm petals further, hide Mino */
 body[data-gate="on"] #mino-root,
 body[data-gate="on"] #capture-fab { display: none !important; }
 body[data-gate="on"] .petals { opacity: 0.35; }

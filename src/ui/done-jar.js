@@ -1,4 +1,4 @@
-// Done jar — every tick lands here. A counter to "no output = no rest is a lie."
+// Done jar · every tick lands here. A counter to "no output = no rest is a lie."
 
 import { el, clear, toast } from '../utils/dom.js';
 import { getState, subscribe, update } from '../state.js';
@@ -72,6 +72,6 @@ function build() {
 function praise(items) {
   const recent = items.slice(-3).map((i) => i.label).filter(Boolean);
   if (recent.length === 0) return 'kept showing up today ✿';
-  if (recent.length === 1) return `${recent[0]} — counts.`;
-  return `${recent.join(' · ')} — visibly real, not vague gushing.`;
+  if (recent.length === 1) return `${recent[0]} · counts.`;
+  return `${recent.join(' · ')} · visibly real, not vague gushing.`;
 }

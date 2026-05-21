@@ -1,13 +1,15 @@
-// Me / settings tab — theme variant, a11y, backup, language, reset.
+// Me / settings tab · theme variant, a11y, backup, language, reset.
 
 import { $, el, clear, toast } from '../utils/dom.js';
 import { getState, update, subscribe, exportAll, importAll, resetAll, IS_GUEST, GUEST_NAME } from '../state.js';
+import { currentUserDisplay, isCopilot, logout } from '../auth.js';
 
 const THEMES = [
   { id: 'blush',    label: 'Blush ✿',    swatch: '#FFD2E0' },
   { id: 'lavender', label: 'Lavender ◇', swatch: '#E0CDF8' },
   { id: 'peachy',   label: 'Peachy 🍑',  swatch: '#FFCDB2' },
   { id: 'sakura',   label: 'Sakura 🌸',  swatch: '#FFC9DE' },
+  { id: 'midnight', label: 'Midnight 🌙', swatch: '#000000' },
 ];
 
 export function renderMe(_params, host) {
@@ -25,7 +27,7 @@ function buildMe() {
     el('h1', { style: { marginBottom: '8px' } }, IS_GUEST ? `hello, ${GUEST_NAME} ♡` : 'me ✿'),
     IS_GUEST ? el('div', { class: 'install-hint' }, [
       el('span', null, '👋'),
-      el('span', null, 'you are in guest mode — Journal, Playbook, and Mino check-ins stay private.')
+      el('span', null, 'you are in guest mode · Journal, Playbook, and Mino check-ins stay private.')
     ]) : null,
 
     // Themes
@@ -130,9 +132,26 @@ function buildMe() {
         IS_GUEST ? 'guests do not sync to Neon.' : 'auto-syncs to Neon a few seconds after every change.')
     ]),
 
+    // Account
+    el('div', { class: 'card' }, [
+      el('div', { class: 'card__title' }, [
+        el('i', { class: 'ph-duotone ph-user-circle' }),
+        'account', el('small', null, currentUserDisplay() || '')
+      ]),
+      el('p', { class: 'muted', style: { margin: '0 0 8px' } }, isCopilot()
+        ? 'logged in as prakhar (co-pilot). journal is private to sriya.'
+        : 'logged in as sriya. yellow-highlighted cards are things prakhar added.'),
+      el('button', { class: 'btn btn--ghost', onClick: () => {
+        if (!confirm('sign out?')) return;
+        logout();
+        location.hash = '/today';
+        location.reload();
+      } }, [el('i', { class: 'ph ph-sign-out' }), ' sign out']),
+    ]),
+
     // About / version
     el('div', { class: 'card', style: { textAlign: 'center' } }, [
-      el('p', { class: 'muted', style: { margin: 0 } }, 'sriya · v1 · made with petals ♡')
+      el('p', { class: 'muted', style: { margin: 0 } }, 'sriya · v2 · made with petals ♡')
     ]),
   ]);
 }
@@ -178,7 +197,7 @@ function doImport(ev) {
       importAll(data);
       toast('imported ✓');
     } catch (e) {
-      toast('bad file — could not import');
+      toast('bad file · could not import');
     }
   };
   reader.readAsText(file);

@@ -1,9 +1,10 @@
-// Health hub — meds, skincare, meditation, workouts, sleep, mood, meals.
+// Health hub · meds, skincare, meditation, workouts, sleep, mood, meals.
 // Sub-section toggle keeps the page light; each section paginates its own log.
 
 import { el, clear, openSheet, closeSheet, toast, bloomAt, haptic } from '../utils/dom.js';
 import { getState, update, subscribe, uid } from '../state.js';
 import { fmtMinutes, todayKey, fmtClock, fmtDate } from '../utils/format.js';
+import { currentUser } from '../auth.js';
 
 const SECTIONS = [
   { id: 'meds',       label: 'meds',       icon: 'ph-pill' },
@@ -63,7 +64,7 @@ function medsSection(s) {
     el('div', { class: 'card' }, [
       el('div', { class: 'card__title' }, [el('i', { class: 'ph-duotone ph-pill' }), 'today', el('small', null, `${taken.size}/${s.health.meds.length}`)]),
       s.health.meds.length === 0
-        ? el('p', { class: 'muted', style: { margin: 0 } }, 'no medicines yet — add one below.')
+        ? el('p', { class: 'muted', style: { margin: 0 } }, 'no medicines yet · add one below.')
         : el('div', { class: 'stack' }, s.health.meds.map((m) => {
             const isDone = taken.has(m.id);
             const row = el('label', { class: 'check', dataset: { done: String(isDone) } }, [
@@ -93,7 +94,7 @@ function medsSection(s) {
                   if (med && Number.isFinite(med.stockCount) && med.stockCount > 0) med.stockCount -= 1;
                   d.doneJar.byDate[day].push({ kind: 'med', id: m.id, label: m.name, at: new Date().toISOString() });
                 } else {
-                  // Untick — refund stock if we'd decremented earlier
+                  // Untick · refund stock if we'd decremented earlier
                   const med = d.health.meds.find((x) => x.id === m.id);
                   if (med && Number.isFinite(med.stockCount)) med.stockCount += 1;
                   d.doneJar.byDate[day] = d.doneJar.byDate[day].filter((j) => !(j.kind === 'med' && j.id === m.id));
@@ -238,7 +239,7 @@ function skincareSection(s) {
     // Exfoliation tracker
     el('div', { class: 'card' }, [
       el('div', { class: 'card__title' }, [el('i', { class: 'ph-duotone ph-sun-horizon' }), 'exfoliation']),
-      daysSinceExfo == null ? el('p', { class: 'muted', style: { margin: 0 } }, 'never logged — that\'s fine.') :
+      daysSinceExfo == null ? el('p', { class: 'muted', style: { margin: 0 } }, 'never logged · that\'s fine.') :
         el('p', { class: 'muted', style: { margin: 0 } }, `${daysSinceExfo} day${daysSinceExfo === 1 ? '' : 's'} since last exfoliation`),
       el('button', { class: 'btn btn--ghost', style: { marginTop: '8px' }, onClick: () => {
         update((d) => (d.health.skincare.log ||= []).unshift({ id: uid('sk'), date: day, exfoliated: true, time: new Date().toISOString() }));
@@ -257,7 +258,7 @@ function routineCard(s, kind) {
   return el('div', { class: 'card' }, [
     el('div', { class: 'card__title' }, [
       el('i', { class: kind === 'am' ? 'ph-duotone ph-sun' : 'ph-duotone ph-moon' }),
-      `routine — ${kind.toUpperCase()}`,
+      `routine · ${kind.toUpperCase()}`,
       el('small', null, `${doneList.length}/${steps.length}`),
     ]),
     steps.length === 0
@@ -419,11 +420,27 @@ function streakDays(dates) {
 // ─── 9.4 WORKOUTS ────────────────────────────────────────────
 function workoutsSection(s) {
   const log = s.health.workoutLog || [];
+  // Library: distinct exercise names seen before (for quick-pick)
+  const library = [...new Set(log.map((l) => l.name).filter(Boolean))].slice(0, 12);
+
   return el('div', { class: 'stack' }, [
     el('div', { class: 'card' }, [
       el('div', { class: 'card__title' }, [el('i', { class: 'ph-duotone ph-barbell' }), 'log a workout']),
+      el('button', { class: 'btn btn--block', onClick: () => openAddExercise() }, [
+        el('i', { class: 'ph-fill ph-plus' }), ' add exercise / cardio'
+      ]),
+      library.length > 0 ? el('div', { style: { marginTop: '10px' } }, [
+        el('div', { class: 'field__label' }, 'recent exercises (one-tap)'),
+        el('div', { class: 'row', style: { flexWrap: 'wrap', gap: '6px' } },
+          library.map((name) => el('button', {
+            class: 'chip', type: 'button', style: { cursor: 'pointer' },
+            onClick: () => openAddExercise(name)
+          }, name))
+        ),
+      ]) : null,
+      el('div', { class: 'field__label', style: { marginTop: '10px' } }, 'quick type tags'),
       el('div', { class: 'row', style: { flexWrap: 'wrap', gap: '6px' } },
-        ['hiit','cardio','strength','yoga','walk','dance'].map((t) =>
+        ['hiit','cardio','strength','yoga','walk','dance','treadmill','cycle','run','pilates','swim'].map((t) =>
           el('button', { class: 'chip', type: 'button', style: { cursor: 'pointer' }, onClick: () => quickLogWorkout(t) }, t))),
     ]),
     el('div', { class: 'card' }, [
@@ -431,17 +448,138 @@ function workoutsSection(s) {
       waterRow(s),
       stepsRow(s),
     ]),
-    recentList(log, 'workout', (l) => `${l.type} · ${fmtMinutes(l.mins || 0)} · ${l.date}`),
+    workoutLogCard(s),
+  ]);
+}
+
+function workoutLogCard(s) {
+  const log = s.health.workoutLog || [];
+  return el('div', { class: 'card' }, [
+    el('div', { class: 'card__title' }, [el('i', { class: 'ph-duotone ph-list-bullets' }), 'recent', el('small', null, `${log.length}`)]),
+    log.length === 0
+      ? el('p', { class: 'muted', style: { margin: 0 } }, 'no entries yet.')
+      : el('div', { class: 'stack' }, log.slice(0, 25).map((l) => workoutRow(l)))
+  ]);
+}
+
+function workoutRow(l) {
+  const isCardio = l.kind === 'cardio';
+  const meta = isCardio
+    ? `${fmtMinutes(l.mins || 0)}${l.speed ? ` · ${l.speed}` : ''}${l.incline ? ` · incl ${l.incline}%` : ''}${l.distance ? ` · ${l.distance}km` : ''}`
+    : `${l.sets || 0}×${l.reps || 0}${l.weight ? ` · ${l.weight}kg` : ''}${l.mins ? ` · ${fmtMinutes(l.mins)}` : ''}`;
+  return el('div', {
+    class: 'card', dataset: l.addedBy === 'prakhar' ? { addedBy: 'prakhar' } : {}, style: { padding: '10px' }
+  }, [
+    el('div', { class: 'row row--between' }, [
+      el('div', null, [
+        el('div', null, [
+          el('span', { class: 'chip', style: { marginRight: '6px', fontSize: '0.65rem' } }, isCardio ? 'cardio' : (l.kind || l.type || 'strength')),
+          el('strong', null, l.name || l.type || 'workout'),
+        ]),
+        el('div', { class: 'muted', style: { fontSize: '0.75rem' } }, `${l.date} · ${meta}`),
+        l.notes ? el('div', { class: 'muted', style: { fontSize: '0.75rem', marginTop: '4px', fontStyle: 'italic' } }, l.notes) : null,
+      ]),
+      el('button', { class: 'btn btn--soft', onClick: () => {
+        if (!confirm('delete entry?')) return;
+        update((d) => { d.health.workoutLog = d.health.workoutLog.filter((x) => x.id !== l.id); });
+      } }, [el('i', { class: 'ph ph-trash' })]),
+    ]),
   ]);
 }
 
 function quickLogWorkout(type) {
-  const mins = parseInt(prompt(`${type} — how many minutes?`, '30'), 10);
-  if (!Number.isFinite(mins) || mins <= 0) return;
-  update((d) => (d.health.workoutLog ||= []).unshift({
-    id: uid('w'), type, mins, date: todayKey(), time: new Date().toISOString(),
-  }));
-  toast('workout logged ✿');
+  openAddExercise(type);
+}
+
+// Full add UI: strength (sets/reps/kg) OR cardio (duration/incline/speed)
+function openAddExercise(prefillName = '') {
+  let kind = ['treadmill','cardio','run','walk','cycle','swim'].includes((prefillName || '').toLowerCase()) ? 'cardio' : 'strength';
+  const tabRow = el('div', { class: 'row', style: { gap: '6px' } });
+  const fName = el('input', { class: 'input', value: prefillName || '', placeholder: kind === 'cardio' ? 'e.g. treadmill, run' : 'e.g. squats, deadlift' });
+
+  const fSets = el('input', { class: 'input', type: 'number', min: 1, value: '3' });
+  const fReps = el('input', { class: 'input', type: 'number', min: 1, value: '10' });
+  const fWeight = el('input', { class: 'input', type: 'number', min: 0, step: '0.5', value: '', placeholder: 'kg' });
+
+  const fMins = el('input', { class: 'input', type: 'number', min: 1, value: '20' });
+  const fSpeed = el('input', { class: 'input', value: '', placeholder: 'speed (e.g. 6.0 km/h)' });
+  const fIncline = el('input', { class: 'input', type: 'number', min: 0, max: 30, step: '0.5', value: '0' });
+  const fDistance = el('input', { class: 'input', type: 'number', min: 0, step: '0.1', value: '', placeholder: 'km (optional)' });
+
+  const fNotes = el('textarea', { class: 'input', rows: 2, placeholder: 'notes (optional)' });
+
+  const strengthBlock = el('div', { class: 'stack' }, [
+    el('div', { class: 'row', style: { gap: '6px', flexWrap: 'wrap' } }, [
+      labeledField('sets', fSets),
+      labeledField('reps', fReps),
+      labeledField('weight (kg)', fWeight),
+    ]),
+    el('div', { class: 'row', style: { gap: '6px' } }, [
+      labeledField('duration (min, optional)', el('input', { class: 'input', type: 'number', min: 0, id: 'strengthMins' })),
+    ]),
+  ]);
+  const cardioBlock = el('div', { class: 'stack' }, [
+    el('div', { class: 'row', style: { gap: '6px', flexWrap: 'wrap' } }, [
+      labeledField('duration (min)', fMins),
+      labeledField('speed', fSpeed),
+    ]),
+    el('div', { class: 'row', style: { gap: '6px', flexWrap: 'wrap' } }, [
+      labeledField('incline %', fIncline),
+      labeledField('distance km', fDistance),
+    ]),
+  ]);
+
+  function paintTabs() {
+    tabRow.innerHTML = '';
+    ['strength','cardio'].forEach((k) => {
+      tabRow.appendChild(el('button', {
+        class: kind === k ? 'chip chip--primary' : 'chip',
+        type: 'button', style: { cursor: 'pointer' },
+        onClick: () => { kind = k; paintTabs(); strengthBlock.style.display = kind === 'strength' ? '' : 'none'; cardioBlock.style.display = kind === 'cardio' ? '' : 'none'; }
+      }, k));
+    });
+  }
+  paintTabs();
+  strengthBlock.style.display = kind === 'strength' ? '' : 'none';
+  cardioBlock.style.display = kind === 'cardio' ? '' : 'none';
+
+  openSheet(el('div', { class: 'stack' }, [
+    tabRow,
+    labeledField('exercise / activity', fName),
+    strengthBlock,
+    cardioBlock,
+    labeledField('notes', fNotes),
+    el('button', { class: 'btn btn--block', onClick: () => {
+      const name = fName.value.trim();
+      if (!name) { toast('what was it called?'); return; }
+      const entry = {
+        id: uid('w'), date: todayKey(), time: new Date().toISOString(),
+        kind, name, notes: fNotes.value.trim(),
+        addedBy: currentUser(),
+      };
+      if (kind === 'strength') {
+        entry.sets = parseInt(fSets.value, 10) || 0;
+        entry.reps = parseInt(fReps.value, 10) || 0;
+        entry.weight = parseFloat(fWeight.value) || 0;
+        const mins = parseInt(document.getElementById('strengthMins')?.value, 10);
+        if (Number.isFinite(mins) && mins > 0) entry.mins = mins;
+      } else {
+        entry.mins = parseInt(fMins.value, 10) || 0;
+        entry.speed = fSpeed.value.trim();
+        entry.incline = parseFloat(fIncline.value) || 0;
+        entry.distance = parseFloat(fDistance.value) || 0;
+      }
+      update((d) => (d.health.workoutLog ||= []).unshift(entry));
+      closeSheet(); toast('logged ✿');
+    } }, 'save'),
+  ]), { title: prefillName ? `log: ${prefillName}` : 'log a workout' });
+}
+
+function labeledField(label, ctrl) {
+  return el('label', { class: 'field', style: { flex: '1 1 110px', margin: 0 } }, [
+    el('span', { class: 'field__label' }, label),
+    ctrl,
+  ]);
 }
 
 function waterRow(s) {
@@ -490,16 +628,16 @@ function sleepSection(s) {
       el('div', { class: 'card__title' }, [el('i', { class: 'ph-duotone ph-moon-stars' }), 'last night']),
       last ? el('div', null, [
         el('div', { style: { fontSize: '1.5rem', fontFamily: 'var(--font-display)', fontStyle: 'italic' } },
-          `${last.hours || '—'} hours`),
+          `${last.hours || '·'} hours`),
         el('div', { class: 'muted', style: { fontSize: '0.75rem' } },
-          `${last.bedtime || '—'} → ${last.wake || '—'} · quality ${last.quality || '—'}/5`),
+          `${last.bedtime || '·'} → ${last.wake || '·'} · quality ${last.quality || '·'}/5`),
       ]) : el('p', { class: 'muted', style: { margin: 0 } }, 'no sleep logs yet.'),
     ]),
     el('div', { class: 'card' }, [
       el('div', { class: 'card__title' }, [el('i', { class: 'ph-duotone ph-plus-circle' }), 'log sleep']),
       sleepEntryForm(),
     ]),
-    recentList(log, 'sleep', (l) => `${l.date} · ${l.hours || '—'}h · quality ${l.quality || '—'}/5`),
+    recentList(log, 'sleep', (l) => `${l.date} · ${l.hours || '·'}h · quality ${l.quality || '·'}/5`),
   ]);
 }
 
@@ -555,7 +693,7 @@ function moodSection(s) {
   ]);
 }
 
-// ─── 9.7 MEALS — yes/no only (anti-goal §18: no numbers) ────
+// ─── 9.7 MEALS · yes/no only (anti-goal §18: no numbers) ────
 function mealsSection(s) {
   const log = s.health.mealLog || [];
   const day = todayKey();
@@ -579,7 +717,7 @@ function mealsSection(s) {
   };
   return el('div', { class: 'stack' }, [
     el('div', { class: 'card' }, [
-      el('div', { class: 'card__title' }, [el('i', { class: 'ph-duotone ph-bowl-food' }), 'meals — yes/no only', el('small', null, 'no numbers')]),
+      el('div', { class: 'card__title' }, [el('i', { class: 'ph-duotone ph-bowl-food' }), 'meals · yes/no only', el('small', null, 'no numbers')]),
       m('breakfast', 'breakfast', '🥣'),
       m('lunch', 'lunch', '🍲'),
       m('dinner', 'dinner', '🍛'),

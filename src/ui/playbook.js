@@ -1,4 +1,4 @@
-// Bestie playbook — concrete spiral exits.
+// Bestie playbook · concrete spiral exits.
 // Scenario cards, each with 1-2-3 actions. Mino routes here from her panel's panic.
 
 import { el, clear, toast } from '../utils/dom.js';
@@ -36,7 +36,7 @@ const SCENARIOS = [
     steps: [
       { label: 'put the phone in the other room (yes, now)', action: () => toast('phone away · room dark ✿') },
       { label: 'park whatever is whirring', href: '#/thought' },
-      { label: 'gentle body scan — toes up, slowly', action: () => toast('toes · ankles · calves · slow ✿') },
+      { label: 'gentle body scan · toes up, slowly', action: () => toast('toes · ankles · calves · slow ✿') },
     ],
   },
   {
@@ -46,8 +46,8 @@ const SCENARIOS = [
     icon: 'ph-heart-break',
     steps: [
       { label: 'send any sticker to Amma (no agenda)', href: '#/people' },
-      { label: 'voice note to Prakhar — even nothing-words', href: '#/people' },
-      { label: 'a book or a comfort show — chosen, not numbing', href: '#/reading' },
+      { label: 'voice note to Prakhar · even nothing-words', href: '#/people' },
+      { label: 'a book or a comfort show · chosen, not numbing', href: '#/reading' },
     ],
   },
   {
@@ -61,7 +61,7 @@ const SCENARIOS = [
           m.startTimer({ label: 'just 5 min', categoryId: 'other', person: 'sriya', note: 'freeze-break' });
           toast('5 min only · the rest is bonus ✿');
         } },
-      { label: 'shrink the task — what\'s the 2-line version?', href: '#/tasks' },
+      { label: 'shrink the task · what\'s the 2-line version?', href: '#/tasks' },
       { label: 'one stretch + one glass of water', action: () => toast('stretch · water · then 5 min ✿') },
     ],
   },
@@ -76,7 +76,7 @@ const SCENARIOS = [
           m.openUrgeSheet();
         } },
       { label: 'dump it to thought-park (the saves swap)', href: '#/thought' },
-      { label: 'open Today instead — what was the real thing?', href: '#/today' },
+      { label: 'open Today instead · what was the real thing?', href: '#/today' },
     ],
   },
 ];
@@ -95,7 +95,7 @@ function build() {
     el('div', { style: { fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: '1.5rem' } },
       'we move slow. one step ✿'),
     el('p', { class: 'muted', style: { margin: '6px 0 0' } },
-      'pick the scenario closest. don\'t aim for "fixed" — aim for "next breath."'),
+      'pick the scenario closest. don\'t aim for "fixed" · aim for "next breath."'),
   ]));
 
   SCENARIOS.forEach((sc) => wrap.appendChild(scenarioCard(sc)));

@@ -1,4 +1,4 @@
-// Reviews — Friday weekly, monthly, consistency, insights.
+// Reviews · Friday weekly, monthly, consistency, insights.
 // All factual, never ranked. No streaks.
 
 import { el, clear } from '../utils/dom.js';
@@ -117,7 +117,7 @@ function monthReview(s) {
   const totalMins = s.timer.log.filter((e) => days.includes(e.date)).reduce((n, e) => n + (e.mins || 0), 0);
   const tasksDone = s.tasks.negotiable.filter((t) => t.status === 'done' && days.includes((t.completedAt || '').slice(0, 10))).length;
   const moods = (s.health.moodLog || []).filter((l) => days.includes(l.date));
-  const avgMood = moods.length ? (moods.reduce((n, m) => n + (m.score || 0), 0) / moods.length).toFixed(1) : '—';
+  const avgMood = moods.length ? (moods.reduce((n, m) => n + (m.score || 0), 0) / moods.length).toFixed(1) : '·';
   const journaled = days.filter((d) => (s.journal.entries || []).some((j) => j.date === d)).length;
 
   return el('div', { class: 'stack' }, [
@@ -171,7 +171,7 @@ function consistencyView(s) {
           ]))),
         ]),
       ]),
-      el('p', { class: 'muted', style: { fontSize: '0.7rem', marginTop: '8px' } }, 'flowers are showed-up days. dots are not failures — they\'re just days.'),
+      el('p', { class: 'muted', style: { fontSize: '0.7rem', marginTop: '8px' } }, 'flowers are showed-up days. dots are not failures · they\'re just days.'),
     ]),
   ]);
 }

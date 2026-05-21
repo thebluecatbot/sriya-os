@@ -1,7 +1,7 @@
 // Local notifications scaffolding.
 // Android PWA (post-install) supports full notifications via the Notification API.
 // Desktop browsers also support them. iOS Safari requires the PWA to be added
-// to the home screen (iOS 16.4+) — see README.
+// to the home screen (iOS 16.4+) · see README.
 //
 // Strategy:
 //  - On app open, schedule today's reminders via setTimeout (in-session).
@@ -59,7 +59,7 @@ export function scheduleDailyReminders() {
   if ((s.health.skincare.pm || []).length) scheduleOnce('sk-pm', '22:00', () => notify('PM skincare ✨'));
 
   // Plan-tomorrow prompt
-  scheduleOnce('plan-tomorrow', '21:30', () => notify('plan tomorrow? ✿', { body: 'just 3 things — kal-me will thank tonight-you' }));
+  scheduleOnce('plan-tomorrow', '21:30', () => notify('plan tomorrow? ✿', { body: 'just 3 things · kal-me will thank tonight-you' }));
 
   // Sleep nudge
   const bedHour = (s.mino.quietHours?.from || '22:30');

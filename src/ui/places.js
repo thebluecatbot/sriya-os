@@ -1,4 +1,4 @@
-// Places & Outings — Mumbai trip planner.
+// Places & Outings · Mumbai trip planner.
 // Two views (places + restaurants), 6 zones from Powai, day-plan builder.
 
 import { el, clear, openSheet, closeSheet, toast } from '../utils/dom.js';
@@ -100,12 +100,12 @@ function ensureSeed(s) {
 function zoneInfoCard(s) {
   if (zoneFilter === 0) return el('div', { class: 'card' }, [
     el('div', { class: 'card__title' }, [el('i', { class: 'ph-duotone ph-compass' }), 'from Powai', el('small', null, '6 zones')]),
-    el('p', { class: 'muted', style: { margin: 0, fontSize: '0.75rem' } }, 'Powai has no train station — Kanjurmarg/Vikhroli (Central) or Ghatkopar (+Metro 1). Cab for South Mumbai.'),
+    el('p', { class: 'muted', style: { margin: 0, fontSize: '0.75rem' } }, 'Powai has no train station · Kanjurmarg/Vikhroli (Central) or Ghatkopar (+Metro 1). Cab for South Mumbai.'),
   ]);
   const zone = ZONES.find((z) => z.id === zoneFilter);
   if (!zone) return el('div');
   return el('div', { class: 'card card--hero' }, [
-    el('div', { class: 'card__title' }, [el('i', { class: 'ph-fill ph-map-trifold' }), `Zone ${zone.id} — ${zone.label}`]),
+    el('div', { class: 'card__title' }, [el('i', { class: 'ph-fill ph-map-trifold' }), `Zone ${zone.id} · ${zone.label}`]),
     el('p', { class: 'muted', style: { margin: 0 } }, `${zone.areas} · ${zone.travelMins} min`),
   ]);
 }
@@ -166,9 +166,9 @@ function venueCard(v) {
         ]),
         el('div', { class: 'muted', style: { fontSize: '0.75rem' } }, `${v.area} · ${v.what}`),
         el('div', { class: 'row', style: { gap: '4px', flexWrap: 'wrap', marginTop: '4px', fontSize: '0.7rem' } }, [
-          el('span', { class: 'chip' }, [el('i', { class: 'ph ph-car' }), ` ${v.travelMins || '—'}m`]),
+          el('span', { class: 'chip' }, [el('i', { class: 'ph ph-car' }), ` ${v.travelMins || '·'}m`]),
           v.price ? el('span', { class: 'chip' }, v.price) : null,
-          v.vegStatus && v.vegStatus !== '—' ? el('span', { class: 'chip' }, v.vegStatus) : null,
+          v.vegStatus && v.vegStatus !== '·' ? el('span', { class: 'chip' }, v.vegStatus) : null,
           (v.flags || []).map((f) => el('span', { class: 'chip', style: { color: 'var(--primary-deep)' } }, f)),
         ]),
         v.whyGo ? el('p', { class: 'muted', style: { margin: '6px 0 0', fontSize: '0.75rem' } }, v.whyGo) : null,
@@ -233,7 +233,7 @@ function outingsView(s) {
         el('span', { class: 'chip' }, `${venues.length} spots`),
         el('span', { class: 'chip' }, `~${Math.round(totalMins / 60)}h`),
         el('span', { class: 'chip' }, `effort: ${effort}`),
-        sameZone ? el('span', { class: 'chip chip--primary' }, 'same zone ✓') : el('span', { class: 'chip', style: { color: 'var(--primary-deep)' } }, 'multiple zones — heavy'),
+        sameZone ? el('span', { class: 'chip chip--primary' }, 'same zone ✓') : el('span', { class: 'chip', style: { color: 'var(--primary-deep)' } }, 'multiple zones · heavy'),
       ]),
       el('div', { class: 'row', style: { gap: '6px' } }, [
         el('button', { class: 'btn btn--block', onClick: () => saveOuting() }, 'save outing'),
@@ -335,7 +335,7 @@ function openAddPlace() {
       update((d) => d.places.items.push({
         id: uid('pl'), name, kind: fKind.value, zone: parseInt(fZone.value, 10),
         area: fArea.value, what: fWhat.value, travelMins: parseInt(fTravel.value, 10) || 30,
-        status: 'want', vegStatus: '—', whyGo: '',
+        status: 'want', vegStatus: '·', whyGo: '',
       }));
       closeSheet(); toast('added ✓');
     } }, 'add'),

@@ -1,4 +1,4 @@
-// Hash routing — no build step, no framework.
+// Hash routing · no build step, no framework.
 // Routes register a render function: (params, host) => void.
 
 const routes = new Map();

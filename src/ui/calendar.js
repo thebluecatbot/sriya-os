@@ -1,4 +1,4 @@
-// Calendar tab — day / week / month views.
+// Calendar tab · day / week / month views.
 // Pulls in events from calendar.events plus derived blocks from scheduled tasks,
 // UPSC revisions (when wave 4 lands), Substack publish dates, planned outings.
 
@@ -213,10 +213,10 @@ function timeGrid(s, days, { compact = false } = {}) {
         onClick: () => openEventEdit(e),
       }, [
         el('div', { style: { fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' } }, e.title),
-        compact ? null : el('div', { class: 'muted', style: { fontSize: '0.65rem' } }, `${e.start} – ${e.end || '—'}`),
+        compact ? null : el('div', { class: 'muted', style: { fontSize: '0.65rem' } }, `${e.start} – ${e.end || '·'}`),
       ]);
 
-      // Completion timer remaining — task.timerStartedAt is set when user taps "start now"
+      // Completion timer remaining · task.timerStartedAt is set when user taps "start now"
       if (e.sourceModule === 'task') {
         const t = s.tasks.negotiable.find((x) => x.id === e.sourceId);
         if (t?.completionTimerMins && t?.timerStartedAt) {
@@ -224,7 +224,7 @@ function timeGrid(s, days, { compact = false } = {}) {
           if (remaining > 0) {
             block.appendChild(el('div', { class: 'chip chip--primary', style: { fontSize: '0.6rem', marginTop: '2px' } }, `${Math.ceil(remaining / 60_000)}m left`));
           } else {
-            block.appendChild(el('div', { class: 'chip', style: { fontSize: '0.6rem', marginTop: '2px', color: 'var(--primary-deep)' } }, 'time up — gently'));
+            block.appendChild(el('div', { class: 'chip', style: { fontSize: '0.6rem', marginTop: '2px', color: 'var(--primary-deep)' } }, 'time up · gently'));
           }
         }
       }
@@ -360,7 +360,7 @@ function openEventEdit(existing) {
     if (task) {
       import('./tasks.js').then((m) => m.openEditSheet(task));
     } else {
-      toast('task gone — refresh');
+      toast('task gone · refresh');
     }
     return;
   }

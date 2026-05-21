@@ -1,7 +1,7 @@
 // Anti-doomscroll system (§14.5).
 // Routes:
-//   /gate      — the 15s pause + "what are you avoiding?" + intention
-//   /doom      — the dashboard: urges log, budget, insights, no-scroll windows
+//   /gate      · the 15s pause + "what are you avoiding?" + intention
+//   /doom      · the dashboard: urges log, budget, insights, no-scroll windows
 // And exports openUrgeSheet() called by Mino's panel + a global FAB option.
 
 import { el, clear, openSheet, closeSheet, toast } from '../utils/dom.js';
@@ -17,7 +17,7 @@ const TRIGGERS = [
   { id: 'tired',    label: 'tired',    emoji: '😶‍🌫' },
 ];
 
-// ─── /gate — the 15-second pause screen ──────────────────────
+// ─── /gate · the 15-second pause screen ──────────────────────
 export function renderGate(_params, host) {
   let unsub = null;
   const paint = () => { clear(host); host.appendChild(buildGate()); };
@@ -56,7 +56,7 @@ function buildGate() {
       el('i', { class: 'ph-duotone ph-question' }),
       'what are you actually avoiding?'
     ]),
-    el('p', { class: 'muted', style: { margin: '0 0 10px' } }, 'name it, even if "nothing — just the urge"'),
+    el('p', { class: 'muted', style: { margin: '0 0 10px' } }, 'name it, even if "nothing · just the urge"'),
     el('div', { class: 'row', style: { flexWrap: 'wrap', gap: '6px', marginBottom: '10px' } },
       TRIGGERS.map((t) => el('button', {
         class: 'chip', type: 'button', style: { cursor: 'pointer' },
@@ -71,7 +71,7 @@ function buildGate() {
         el('i', { class: 'ph-duotone ph-cloud' }), ' park the thought instead ✿'
       ]),
       el('a', { class: 'btn btn--soft btn--block', href: '#/today' }, [
-        el('i', { class: 'ph-duotone ph-flower' }), ' open Today — what\'s next?'
+        el('i', { class: 'ph-duotone ph-flower' }), ' open Today · what\'s next?'
       ]),
       el('a', { class: 'btn btn--soft btn--block', href: '#/reading' }, [
         el('i', { class: 'ph-duotone ph-book-open' }), ' read instead'
@@ -133,11 +133,11 @@ function goAnyway(mins) {
       opened: true, mins, at: now.toISOString(), date: day, hour: now.getHours(),
     });
   });
-  toast(`okay — i'll check on you in ${mins} min ✿`);
+  toast(`okay · i'll check on you in ${mins} min ✿`);
   // Send self a reminder via Notification API if granted
   if ('Notification' in window && Notification.permission === 'granted') {
     setTimeout(() => {
-      new Notification('time check ♡', { body: `you said ${mins} min — back to real things?`, icon: '/icons/icon-192.svg' });
+      new Notification('time check ♡', { body: `you said ${mins} min · back to real things?`, icon: '/icons/icon-192.svg' });
     }, mins * 60_000);
   }
   // Leave the gate by going to Today
@@ -188,7 +188,7 @@ export function openUrgeSheet() {
   openSheet(wrap, { title: 'urge button' });
 }
 
-// ─── /doom — dashboard ───────────────────────────────────────
+// ─── /doom · dashboard ───────────────────────────────────────
 export function renderDoomDash(_params, host) {
   let unsub = null;
   const paint = () => { clear(host); host.appendChild(buildDash()); };
@@ -278,7 +278,7 @@ function noScrollWindowsCard(s) {
   return el('div', { class: 'card' }, [
     el('div', { class: 'card__title' }, [el('i', { class: 'ph-duotone ph-moon-stars' }), 'no-scroll windows']),
     el('p', { class: 'muted', style: { margin: '0 0 8px', fontSize: '0.75rem' } }, 'mino is firmer at the gate during these.'),
-    windows.length === 0 ? el('p', { class: 'muted', style: { margin: 0 } }, 'no windows yet — recommended: 1h after wake, 1h before bed.') :
+    windows.length === 0 ? el('p', { class: 'muted', style: { margin: 0 } }, 'no windows yet · recommended: 1h after wake, 1h before bed.') :
       el('div', { class: 'stack' }, windows.map((w, i) => el('div', { class: 'row row--between' }, [
         el('span', null, `${w.from} → ${w.to}${w.label ? ` · ${w.label}` : ''}`),
         el('button', { class: 'btn btn--soft', onClick: () => update((d) => { d.doomscroll.noScrollWindows.splice(i, 1); }) }, [el('i', { class: 'ph ph-trash' })]),
@@ -321,7 +321,7 @@ function insightsCard(s) {
     el('div', { class: 'card__title' }, [el('i', { class: 'ph-duotone ph-chart-line-up' }), 'insights', el('small', null, `${urges.length} urges`)]),
     el('div', { class: 'stack' }, [
       el('p', { style: { margin: 0 } }, [el('strong', null, 'most urges hit when: '), topTrig.map(([k, v]) => `${k} (${v})`).join(' · ')]),
-      el('p', { style: { margin: 0 } }, [el('strong', null, 'peak hour: '), `${peakHour}:00 — gate gets firmer then`]),
+      el('p', { style: { margin: 0 } }, [el('strong', null, 'peak hour: '), `${peakHour}:00 · gate gets firmer then`]),
       el('p', { class: 'muted', style: { margin: 0, fontSize: '0.75rem' } }, 'pattern, not verdict. used to plan, not to punish.'),
     ]),
   ]);

@@ -1,4 +1,4 @@
-// Global search — one box that searches across every module.
+// Global search · one box that searches across every module.
 // Triggered by long-press on the FAB or Ctrl/Cmd+K keyboard shortcut.
 
 import { el, clear, openSheet, closeSheet } from '../utils/dom.js';
@@ -6,7 +6,7 @@ import { getState } from '../state.js';
 
 export function openSearch() {
   const input = el('input', {
-    class: 'input', placeholder: 'search everything — tasks, journal, quotes, UPSC, drafts, people…',
+    class: 'input', placeholder: 'search everything · tasks, journal, quotes, UPSC, drafts, people…',
     'aria-label': 'Global search',
     autocomplete: 'off',
   });

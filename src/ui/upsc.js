@@ -1,4 +1,4 @@
-// UPSC — full module: syllabus tree · sources · spaced revisions · PYQ ·
+// UPSC · full module: syllabus tree · sources · spaced revisions · PYQ ·
 // mocks · answer-writing · current affairs · topic notes · essay bank · planner.
 // First-timer roadmap surfaces when there's no data yet.
 
@@ -79,13 +79,13 @@ function dashboardSection(s) {
       el('div', { class: 'card__title' }, [el('i', { class: 'ph-duotone ph-flower' }), 'today, slowly']),
       el('p', { class: 'muted', style: { margin: 0 } }, planner.stage
         ? `target: ${planner.stage}${planner.year ? ` ${planner.year}` : ''}${daysToExam != null ? ` · ${daysToExam}d to go` : ''}`
-        : 'set your target in planner — Prelims/Mains + year.'),
+        : 'set your target in planner · Prelims/Mains + year.'),
     ]),
 
     el('div', { class: 'card' }, [
       el('div', { class: 'card__title' }, [el('i', { class: 'ph-duotone ph-arrows-clockwise' }), 'due today', el('small', null, `${dueRevs.length}`)]),
       dueRevs.length === 0
-        ? el('p', { class: 'muted', style: { margin: 0 } }, 'no revisions due — set status "reading" on a topic to start the cycle.')
+        ? el('p', { class: 'muted', style: { margin: 0 } }, 'no revisions due · set status "reading" on a topic to start the cycle.')
         : el('div', { class: 'stack' }, dueRevs.slice(0, 8).map((r) => el('div', { class: 'row row--between' }, [
             el('span', null, [el('span', { class: 'chip', style: { marginRight: '6px' } }, r.stage || 'R1'), r.topic]),
             el('button', { class: 'btn btn--soft', onClick: () => completeRevision(r) }, 'done'),
@@ -125,9 +125,9 @@ function roadmapCard(s) {
   return el('div', { class: 'card' }, [
     el('div', { class: 'card__title' }, [el('i', { class: 'ph-duotone ph-compass' }), 'first-timer roadmap']),
     el('ol', { style: { paddingLeft: '20px', margin: 0 } }, [
-      el('li', null, 'one source per subject — guardrail. resist the collector\'s instinct.'),
+      el('li', null, 'one source per subject · guardrail. resist the collector\'s instinct.'),
       el('li', null, 'set status "reading" on 2–3 topics in syllabus → they auto-schedule R1/R2/R3 revisions.'),
-      el('li', null, 'pick a stage in planner (Prelims/Mains) + exam year — the calendar gets a countdown.'),
+      el('li', null, 'pick a stage in planner (Prelims/Mains) + exam year · the calendar gets a countdown.'),
       el('li', null, 'PYQs mapped to topics show what\'s high-yield.'),
       el('li', null, 'one mock test per week. score trend > absolute score.'),
       el('li', null, 'current affairs = 30 min/day, tagged by GS paper.'),
@@ -338,7 +338,7 @@ function addPYQ() {
   if (!year) return;
   const subject = prompt('subject (GS1/2/3/4/Essay/CSAT)', 'GS2');
   if (!subject) return;
-  const topic = prompt('mapped topic (free text — e.g. "Federalism")', '');
+  const topic = prompt('mapped topic (free text · e.g. "Federalism")', '');
   update((d) => d.upsc.pyq.push({ id: uid('pyq'), q, year, subject, topic, attempted: false }));
 }
 
@@ -359,7 +359,7 @@ function mocksSection(s) {
             flex: 1, height: `${h}px`,
             background: m.score >= (m.maxScore || 200) * 0.5 ? 'var(--primary)' : 'var(--primary-soft)',
             borderRadius: '4px 4px 0 0',
-          }, title: `${m.name}: ${m.score}/${m.maxScore || '—'}` });
+          }, title: `${m.name}: ${m.score}/${m.maxScore || '·'}` });
         })),
     ]) : null,
     el('div', { class: 'card' }, [
@@ -421,7 +421,7 @@ function answersSection(s) {
         el('div', { class: 'stack' }, list.slice(0, 15).map((a) => el('div', { class: 'card', style: { padding: '10px' } }, [
           el('div', null, [el('strong', null, a.question)]),
           el('div', { class: 'muted', style: { fontSize: '0.75rem' } },
-            `${a.date} · ${a.words || '—'}w · ${a.minutes || '—'}m · self ${a.selfScore || '—'}/10${a.mentorFeedback ? ' · mentor ✓' : ''}`),
+            `${a.date} · ${a.words || '·'}w · ${a.minutes || '·'}m · self ${a.selfScore || '·'}/10${a.mentorFeedback ? ' · mentor ✓' : ''}`),
         ]))),
     ]),
   ]);
@@ -479,12 +479,12 @@ function essaysSection(s) {
   return el('div', { class: 'stack' }, [
     el('div', { class: 'card' }, [
       el('div', { class: 'card__title' }, [el('i', { class: 'ph-duotone ph-feather' }), 'essay bank', el('small', null, `${bank.length}`)]),
-      el('p', { class: 'muted', style: { margin: 0, fontSize: '0.75rem' } }, 'quotes, anecdotes, case studies — tagged by theme.'),
+      el('p', { class: 'muted', style: { margin: 0, fontSize: '0.75rem' } }, 'quotes, anecdotes, case studies · tagged by theme.'),
       el('button', { class: 'btn', style: { marginTop: '8px' }, onClick: addEssayItem }, '+ add to bank'),
     ]),
     el('div', { class: 'card' }, [
       el('div', { class: 'card__title' }, [el('i', { class: 'ph-duotone ph-list-bullets' }), 'recent']),
-      bank.length === 0 ? el('p', { class: 'muted', style: { margin: 0 } }, 'empty — drop quotes & cases here as you read.') :
+      bank.length === 0 ? el('p', { class: 'muted', style: { margin: 0 } }, 'empty · drop quotes & cases here as you read.') :
         el('div', { class: 'stack' }, bank.slice(0, 15).map((b) => el('div', { class: 'card', style: { padding: '8px' } }, [
           el('div', null, [el('span', { class: 'chip', style: { marginRight: '6px' } }, b.kind || 'note'), b.text]),
           (b.tags || []).length ? el('div', { class: 'muted', style: { fontSize: '0.7rem', marginTop: '4px' } }, b.tags.join(' · ')) : null,
@@ -531,7 +531,7 @@ function plannerSection(s) {
     ]),
     el('div', { class: 'card' }, [
       el('div', { class: 'card__title' }, [el('i', { class: 'ph-duotone ph-calendar' }), 'weekly subject rotation']),
-      el('p', { class: 'muted', style: { margin: 0, fontSize: '0.75rem' } }, 'a soft rotation — set or skip.'),
+      el('p', { class: 'muted', style: { margin: 0, fontSize: '0.75rem' } }, 'a soft rotation · set or skip.'),
       el('div', { class: 'stack', style: { marginTop: '8px' } },
         ['Mon GS1', 'Tue GS2', 'Wed GS3', 'Thu GS4 + Essay', 'Fri CSAT', 'Sat mock', 'Sun review'].map((row) =>
           el('div', { class: 'row' }, [

@@ -1,4 +1,4 @@
-// UPSC syllabus seed — GS1-4 + Essay + CSAT + Optional placeholder.
+// UPSC syllabus seed · GS1-4 + Essay + CSAT + Optional placeholder.
 // Faithful to the official UPSC syllabus but condensed to topic-level.
 // Status per topic: not-started | reading | revised | confident
 

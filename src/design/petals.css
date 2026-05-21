@@ -54,7 +54,7 @@
   100% { transform: translate3d(-3%, 8%, 0) rotate(8deg); }
 }
 
-/* Pause when document hidden (Page Visibility) — set by app.js */
+/* Pause when document hidden (Page Visibility) · set by app.js */
 [data-tab-hidden="true"] .petals::before,
 [data-tab-hidden="true"] .petals::after { animation-play-state: paused; }
 

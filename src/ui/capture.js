@@ -4,6 +4,7 @@
 import { el, openSheet, closeSheet, toast, $ } from '../utils/dom.js';
 import { update, uid, TODAY } from '../state.js';
 import { parseTask } from '../utils/parse-task.js';
+import { currentUser } from '../auth.js';
 
 const DEST_LABELS = {
   task:    'task',
@@ -32,11 +33,11 @@ export function openCapture() {
     });
   }
 
-  // Smart-default routing — first non-empty heuristic wins.
+  // Smart-default routing · first non-empty heuristic wins.
   input.addEventListener('input', () => {
     const t = input.value.toLowerCase();
     let guess = 'task';
-    if (/^["“].+["”]\s*[—-]/.test(input.value)) guess = 'quote';
+    if (/^["“].+["”]\s*[·-]/.test(input.value)) guess = 'quote';
     else if (/^(idea|substack|post|piece|video|essay):/.test(t)) guess = 'idea';
     else if (/^(thought|stuck|spiral|head|mind):/.test(t))        guess = 'thought';
     else if (/^(journal|today|felt|feeling):/.test(t))            guess = 'journal';
@@ -86,6 +87,7 @@ function route(dest, text) {
           person: 'sriya', subtasks: [], status: 'open',
           linkedModule: parsed.linkedModule || null,
           createdAt: new Date().toISOString(),
+          addedBy: currentUser(),
         });
       });
       toast('task added ✓');
@@ -93,21 +95,21 @@ function route(dest, text) {
     }
     case 'idea': {
       update((d) => {
-        d.substack.ideas.unshift({ id: uid('i'), text, createdAt: new Date().toISOString() });
+        d.substack.ideas.unshift({ id: uid('i'), text, createdAt: new Date().toISOString(), addedBy: currentUser() });
       });
       toast('idea parked ✓');
       break;
     }
     case 'quote': {
       update((d) => {
-        d.reading.quotes.unshift({ id: uid('q'), text, date: new Date().toISOString(), tags: [] });
+        d.reading.quotes.unshift({ id: uid('q'), text, date: new Date().toISOString(), tags: [], addedBy: currentUser() });
       });
       toast('quote saved ✓');
       break;
     }
     case 'thought': {
       update((d) => {
-        d.thoughtPark.items.unshift({ id: uid('p'), text, date: new Date().toISOString(), triaged: false });
+        d.thoughtPark.items.unshift({ id: uid('p'), text, date: new Date().toISOString(), triaged: false, addedBy: currentUser() });
       });
       toast('parked ✿');
       break;
@@ -115,7 +117,7 @@ function route(dest, text) {
     case 'journal': {
       update((d) => {
         d.journal.entries.unshift({
-          id: uid('j'), date: TODAY(), time: new Date().toISOString(), body: text, mood: null,
+          id: uid('j'), date: TODAY(), time: new Date().toISOString(), body: text, mood: null, addedBy: currentUser(),
         });
       });
       toast('journal line saved ✓');
@@ -124,7 +126,7 @@ function route(dest, text) {
     case 'log': {
       update((d) => {
         d.doneJar.byDate[TODAY()] = d.doneJar.byDate[TODAY()] || [];
-        d.doneJar.byDate[TODAY()].push({ kind: 'note', label: text, at: new Date().toISOString() });
+        d.doneJar.byDate[TODAY()].push({ kind: 'note', label: text, at: new Date().toISOString(), addedBy: currentUser() });
       });
       toast('logged ✓');
       break;
@@ -132,7 +134,7 @@ function route(dest, text) {
   }
 }
 
-// parseTask now lives in src/utils/parse-task.js — shared with the brain-dump.
+// parseTask now lives in src/utils/parse-task.js · shared with the brain-dump.
 
 function startVoice(input) {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -147,7 +149,7 @@ function startVoice(input) {
     input.value = txt;
     input.dispatchEvent(new Event('input'));
   };
-  rec.onerror = () => toast('mic error — try typing');
+  rec.onerror = () => toast('mic error · try typing');
   rec.onend = () => toast('listening done');
   rec.start();
   toast('listening… ✿');

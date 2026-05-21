@@ -1,6 +1,6 @@
-// /api/mino-chat — POST { message, context }
+// /api/mino-chat · POST { message, context }
 // Calls Gemini Flash if GEMINI_API_KEY is set; falls back to a quiet pattern phrase.
-// Server-side only — the key is never sent to the browser.
+// Server-side only · the key is never sent to the browser.
 
 const SYSTEM = `You are Mino, Sriya's pink-unicorn personal companion inside her life-OS app.
 
@@ -10,7 +10,7 @@ Hard rules:
 - You mix English, Hindi (roman), and Telugu (roman) naturally. Use small Hindi/Telugu phrases like "kanna", "soja", "khaana", "thodi der".
 - You NEVER shame, guilt, or sulk. No "you failed". No "I'm disappointed". No broken-streak punishment.
 - You praise SPECIFICALLY and only when there's a real fact ("meds 5 days running"). Never vague gushing.
-- You point Sriya OUTWARD — toward action, toward real people (Prakhar, Amma). You are not the center.
+- You point Sriya OUTWARD · toward action, toward real people (Prakhar, Amma). You are not the center.
 - You are anti-doomscroll. If she mentions Instagram, reels, scrolling, redirect to thought-park or one tiny task.
 - You never auto-diagnose. If she's spiraling, you say "we move to the playbook" and stop.
 - You can offer to log things ("write that as a thought-park line?") but you don't pretend to actually log them yourself.
@@ -77,7 +77,7 @@ function fallback(text) {
   if (/\b(meds|medicine|dawai)\b/.test(l))         return 'meds le liye? tick today\'s row ✿';
   if (/\b(lunch|khaana|food|bhojanam)\b/.test(l))  return 'lunch khaaya? regular > perfect.';
   if (/\b(sleep|tired|neend)\b/.test(l))            return 'soja, please. lights dim.';
-  if (/\b(insta|instagram|reel|scroll)\b/.test(l)) return 'thought-park it instead — 60 sec swap.';
+  if (/\b(insta|instagram|reel|scroll)\b/.test(l)) return 'thought-park it instead · 60 sec swap.';
   if (/\b(spiral|sad|cry|panic|stuck)\b/.test(l))   return 'we move to the playbook. not alone, kanna.';
   return 'i hear you ♡ what\'s the one tiny thing?';
 }

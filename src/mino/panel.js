@@ -1,4 +1,4 @@
-// Mino's panel — chat + suggestions + check-in + panic button + controls.
+// Mino's panel · chat + suggestions + check-in + panic button + controls.
 
 import { $, el, clear, openSheet, closeSheet, toast } from '../utils/dom.js';
 import { getState, update, TODAY } from '../state.js';
@@ -19,7 +19,7 @@ function renderPanel() {
   const s = getState();
   const part = dayPart();
 
-  // One next action — never a list.
+  // One next action · never a list.
   const action = nextAction(s);
 
   const wrap = el('div', { class: 'stack' });
@@ -89,7 +89,7 @@ function wardrobeBlock() {
   const unlocked = new Set(s.mino.unlocks || []);
   const equipped = s.mino.equippedAccessoryId || null;
 
-  // Lazy access UNLOCKS list — populated from unlocks.js
+  // Lazy access UNLOCKS list · populated from unlocks.js
   // We hard-code a small list mirror here to avoid import cycle in panel.js.
   const ALL = [
     { id: 'default', label: 'starter', emoji: '✿' },
@@ -164,7 +164,7 @@ function quickToggleRow(taskId, label) {
 
 function chatBlock() {
   const log = el('div', { class: 'stack', style: { fontSize: '0.875rem' } });
-  const input = el('input', { class: 'input', type: 'text', placeholder: 'ask Mino — or type a quick log…' });
+  const input = el('input', { class: 'input', type: 'text', placeholder: 'ask Mino · or type a quick log…' });
   const send = el('button', { class: 'btn', type: 'button' }, 'say');
 
   async function pushTurn(role, text) {
@@ -229,9 +229,9 @@ function controlsBlock() {
         class: 'select',
         onChange: (e) => update((d) => { d.mino.chattiness = e.target.value; })
       }, [
-        ['chatty', 'chatty — lots of pings'],
-        ['balanced', 'balanced — once per day-part'],
-        ['quiet', 'quiet — only when I tap her'],
+        ['chatty', 'chatty · lots of pings'],
+        ['balanced', 'balanced · once per day-part'],
+        ['quiet', 'quiet · only when I tap her'],
       ].map(([v, l]) => el('option', { value: v, selected: s.mino.chattiness === v }, l)))
     ]),
     el('label', { class: 'field' }, [

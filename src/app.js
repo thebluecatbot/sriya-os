@@ -1,6 +1,8 @@
-// Entry — sets up state, theme, router, shell, Mino.
+// Entry · sets up state, theme, router, shell, Mino.
 
 import { initState, getState, subscribe, update } from './state.js';
+import * as auth from './auth.js';
+import { showLoginGate } from './ui/login.js';
 import { startRouter, registerRoute, setRouteHost } from './router.js';
 import { mountShell } from './ui/shell.js';
 import { mountMino } from './mino/mascot.js';
@@ -30,15 +32,25 @@ import { mountNotifications } from './utils/notifications.js';
 import { $ } from './utils/dom.js';
 
 (async function main() {
+  auth.init();
+  setRouteHost($('#view'));
+
+  if (!auth.isLoggedIn()) {
+    // Show login first. Boot the rest after a successful login.
+    showLoginGate({ onLogin: bootApp });
+    return;
+  }
+  await bootApp();
+})();
+
+async function bootApp() {
   await initState();
   applyInitialTheme(getState());
   subscribe(applyInitialTheme); // re-apply on any settings change
 
   runDailyTick(getState(), update);
 
-  setRouteHost($('#view'));
   registerRoutes();
-
   mountShell();
   mountMino();
   mountNotifications();
@@ -46,10 +58,20 @@ import { $ } from './utils/dom.js';
   bindSearchShortcut();
   bindGlobalShortcuts();
   startRouter();
+  // Lock copilot out of private modules
+  window.addEventListener('hashchange', enforceRouteAccess);
+  enforceRouteAccess();
   registerSW();
   bindVisibility();
   bindOffline();
-})();
+}
+
+function enforceRouteAccess() {
+  const path = location.hash.replace(/^#/, '');
+  if (path && !auth.canAccess(path)) {
+    location.hash = '/today';
+  }
+}
 
 function bindGlobalShortcuts() {
   // Long-press the FAB → open search
@@ -112,7 +134,7 @@ function applyInitialTheme(s) {
 function registerSW() {
   if (!('serviceWorker' in navigator)) return;
   if (location.protocol !== 'http:' && location.protocol !== 'https:') return;
-  // Skip SW on localhost during dev — it caches modules and confuses live edits.
+  // Skip SW on localhost during dev · it caches modules and confuses live edits.
   const isLocalDev = ['localhost', '127.0.0.1'].includes(location.hostname);
   if (isLocalDev) {
     navigator.serviceWorker.getRegistrations().then((rs) => rs.forEach((r) => r.unregister()));

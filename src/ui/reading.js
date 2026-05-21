@@ -1,4 +1,4 @@
-// Reading — media-aware (book/manga/wattpad/comic), shelves, quotes wall,
+// Reading · media-aware (book/manga/wattpad/comic), shelves, quotes wall,
 // 3-level notes (per-book / per-chapter / per-quote), Open Library auto-fill.
 
 import { el, clear, openSheet, closeSheet, toast } from '../utils/dom.js';
@@ -72,10 +72,10 @@ function shelfView(s, shelf) {
   if (items.length === 0) {
     return el('div', { class: 'card empty' }, [
       el('div', { class: 'empty__art' }, [el('i', { class: 'ph-duotone ph-book-open' })]),
-      el('p', null, shelf === 'reading' ? 'nothing in progress — add one ✿'
-        : shelf === 'want'     ? 'no wishlist — that\'s fine.'
-        : shelf === 'finished' ? 'no finished books yet — re-reads count.'
-                                : 'no DNFs — dropping is healthy.'),
+      el('p', null, shelf === 'reading' ? 'nothing in progress · add one ✿'
+        : shelf === 'want'     ? 'no wishlist · that\'s fine.'
+        : shelf === 'finished' ? 'no finished books yet · re-reads count.'
+                                : 'no DNFs · dropping is healthy.'),
     ]);
   }
   return el('div', { class: 'stack' }, items.map((b) => bookCard(b, s)));
@@ -158,7 +158,7 @@ function openQuoteAdd(b) {
   const fText = el('textarea', { class: 'input', rows: 4, placeholder: 'paste the quote' });
   const fLoc = el('input', { class: 'input', placeholder: 'location (page, chapter, link)' });
   const fNote = el('input', { class: 'input', placeholder: 'why it stayed with you (optional)' });
-  const fTags = el('input', { class: 'input', placeholder: 'tags (comma-separated) — for essay-bank, substack' });
+  const fTags = el('input', { class: 'input', placeholder: 'tags (comma-separated) · for essay-bank, substack' });
   openSheet(el('div', { class: 'stack' }, [
     el('p', { class: 'muted' }, `quote from "${b.title}"`),
     fText, fLoc, fNote, fTags,
@@ -212,7 +212,7 @@ function openEditBook(b) {
     el('option', { value: m.id, selected: b.media === m.id }, m.label)));
   const fTotal = el('input', { class: 'input', type: 'number', min: 0, value: b.total || '' });
   const fRating = el('select', { class: 'select' }, [0,1,2,3,4,5].map((n) =>
-    el('option', { value: n, selected: b.rating === n }, n === 0 ? '—' : '★'.repeat(n))));
+    el('option', { value: n, selected: b.rating === n }, n === 0 ? '·' : '★'.repeat(n))));
   const fReview = el('textarea', { class: 'input', rows: 3, value: b.review || '', placeholder: 'review (optional)' });
   const fLink = el('input', { class: 'input', value: b.linkedModule || '', placeholder: 'link to module: upsc / substack / mtp' });
   openSheet(el('div', { class: 'stack' }, [
@@ -273,7 +273,7 @@ function quotesWall(s) {
     if (filtered.length === 0) {
       wrap.appendChild(el('div', { class: 'card empty' }, [
         el('div', { class: 'empty__art' }, [el('i', { class: 'ph-duotone ph-quotes' })]),
-        el('p', null, 'no matching quotes — capture some from a book.'),
+        el('p', null, 'no matching quotes · capture some from a book.'),
       ]));
     } else {
       filtered.slice(0, pageSize).forEach((qu) => wrap.appendChild(quoteCard(qu)));
@@ -297,7 +297,7 @@ function quoteCard(qu) {
   return el('div', { class: 'card', style: { borderLeft: '3px solid var(--primary)' } }, [
     el('div', { style: { fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: '1rem', whiteSpace: 'pre-wrap' } }, `"${qu.text}"`),
     el('div', { class: 'muted', style: { fontSize: '0.75rem', marginTop: '6px' } },
-      `— ${qu.bookTitle || 'unknown'}${qu.location ? ` · ${qu.location}` : ''} · ${relative(Date.parse(qu.date))}`),
+      `· ${qu.bookTitle || 'unknown'}${qu.location ? ` · ${qu.location}` : ''} · ${relative(Date.parse(qu.date))}`),
     qu.note ? el('p', { style: { margin: '6px 0 0', fontSize: '0.8rem' } }, qu.note) : null,
     (qu.tags || []).length ? el('div', { class: 'row', style: { flexWrap: 'wrap', gap: '4px', marginTop: '4px' } },
       qu.tags.map((t) => el('span', { class: 'chip', style: { fontSize: '0.65rem' } }, `#${t}`))) : null,
@@ -314,12 +314,12 @@ function quoteCard(qu) {
 }
 
 function exportToSubstack(quotes) {
-  // Drop them into the most recent draft's research locker — or create a new draft
+  // Drop them into the most recent draft's research locker · or create a new draft
   update((d) => {
     let target = d.substack.pieces.find((p) => p.stage === 'Researching' || p.stage === 'Outlining' || p.stage === 'Drafting');
     if (!target) {
       target = {
-        id: uid('pc'), type: 'post', title: 'untitled — quotes locker',
+        id: uid('pc'), type: 'post', title: 'untitled · quotes locker',
         stage: 'Researching', body: '', versions: [],
         research: [], outline: '', publishChecklist: {}, performance: {},
         createdAt: new Date().toISOString(),
@@ -371,7 +371,7 @@ function openAdd() {
       const res = await fetch(`https://openlibrary.org/search.json?title=${encodeURIComponent(fTitle.value)}&limit=1`);
       const data = await res.json();
       const doc = data.docs?.[0];
-      if (!doc) { toast('no match — fill in by hand ✿'); return; }
+      if (!doc) { toast('no match · fill in by hand ✿'); return; }
       if (doc.author_name?.[0]) fCreator.value = doc.author_name[0];
       if (doc.number_of_pages_median) fTotal.value = doc.number_of_pages_median;
       if (doc.cover_i) {
@@ -382,7 +382,7 @@ function openAdd() {
         toast('found (no cover)');
       }
     } catch (e) {
-      toast('offline — fill in by hand');
+      toast('offline · fill in by hand');
     }
   } }, [el('i', { class: 'ph ph-magnifying-glass' }), ' auto-fill from Open Library']);
 

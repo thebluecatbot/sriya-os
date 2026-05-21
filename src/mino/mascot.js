@@ -1,4 +1,4 @@
-// Mino mascot — floating pink unicorn bottom-right.
+// Mino mascot · floating pink unicorn bottom-right.
 // Mood states: happy, sleepy, wave, encouraging. NEVER sad.
 
 import { $, el, clear } from '../utils/dom.js';
@@ -16,7 +16,7 @@ export function mountMino() {
   clear(root);
 
   const btn = el('button', {
-    class: 'mino', type: 'button', 'aria-label': 'Mino — tap to open',
+    class: 'mino', type: 'button', 'aria-label': 'Mino · tap to open',
     dataset: { mood: 'happy' },
     onClick: () => openMinoPanel(),
   }, [
@@ -32,7 +32,7 @@ export function mountMino() {
     btn.style.opacity = document.hidden ? '0.5' : '';
   });
 
-  // Initial callout — gentle hello + (maybe) a check-in offer.
+  // Initial callout · gentle hello + (maybe) a check-in offer.
   setTimeout(maybeCheckIn, 900);
   // Schedule a soft re-check every 20 minutes (only fires if mood/dayPart changed).
   setInterval(maybeCheckIn, 20 * 60 * 1000);
@@ -94,7 +94,7 @@ function maybeCheckIn() {
   if (isQuiet(s) && s.mino.chattiness !== 'chatty') return;
   if (s.mino.chattiness === 'quiet') return;
 
-  // Forgot-to-stop guard takes priority — it's a real ask, not a check-in.
+  // Forgot-to-stop guard takes priority · it's a real ask, not a check-in.
   if (isStaleTimer(s, 3)) {
     showCallout('still on this timer? want me to stop or split it?', {
       actionable: true,
@@ -160,7 +160,7 @@ function tick(draft, taskId) {
 export function nextAction(s) {
   const ticks = s.nonNegotiables.tickLog[todayKey()] || {};
   if (!ticks['mn-2']) return 'one tiny win: tick morning meds ✿';
-  if (!ticks['mn-4']) return 'a glass of water — go';
+  if (!ticks['mn-4']) return 'a glass of water · go';
 
   // Energy-aware: pick a task that fits today's mood
   const todayMood = (s.health.moodLog || []).find((l) => l.date === todayKey())?.score;
@@ -171,7 +171,7 @@ export function nextAction(s) {
   else                      pick = open[0];
 
   if (pick) {
-    const why = todayMood <= 2 ? ' — soft pick for a low day' : todayMood >= 4 ? ' — you have the fuel' : '';
+    const why = todayMood <= 2 ? ' · soft pick for a low day' : todayMood >= 4 ? ' · you have the fuel' : '';
     return `start: "${pick.title}"${why}`;
   }
   if (!ticks['nt-4']) return 'two lines in the journal, kanna';

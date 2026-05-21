@@ -1,4 +1,4 @@
-/* sriya — design tokens
+/* sriya · design tokens
    The whole app is feminine through softness and colour, never clutter.
    Four user-selectable variants: Blush (default), Lavender, Peachy, Sakura.
    Light + dark for each. Dark uses plum/mauve, never harsh black.
@@ -43,7 +43,7 @@
   --safe-top: env(safe-area-inset-top);
   --safe-bottom: env(safe-area-inset-bottom);
 
-  /* Accent rainbow — palette swap below changes these. */
+  /* Accent rainbow · palette swap below changes these. */
   --accent-pink: #F08AAB;
   --accent-rose: #E66B95;
   --accent-lilac: #C9A6E6;
@@ -138,6 +138,28 @@
   --info:         #BAA0E2;
   --gradient-card: linear-gradient(160deg, #FFF7FB 0%, #FFD8EC 100%);
   --gradient-hero: linear-gradient(135deg, #FFD8EC 0%, #FFE0CF 50%, #E5D5FA 100%);
+}
+
+/* ─────────── MIDNIGHT (true-black, white text) ─────────── */
+[data-theme="midnight"] {
+  --bg:        #000000;
+  --bg-soft:   #0E0E10;
+  --surface:   #121214;
+  --surface-2: #1A1A1D;
+  --surface-3: #232328;
+  --ink:        #FFFFFF;
+  --ink-soft:   #E8E8EE;
+  --ink-mute:   #9A9AA4;
+  --line:       #2A2A30;
+  --primary:      #F47BA7;
+  --primary-deep: #FFA0C2;
+  --primary-soft: #3A1E2C;
+  --on-primary:   #1A0E14;
+  --good:         #79C2B0;
+  --warn:         #E5B375;
+  --info:         #BAA0E2;
+  --gradient-card: linear-gradient(160deg, #121214 0%, #1A1A1D 100%);
+  --gradient-hero: linear-gradient(135deg, #1A1A1D 0%, #2A1E26 50%, #2A2030 100%);
 }
 
 /* ─────────── DARK MODE (plum / mauve, never harsh black) ─────────── */

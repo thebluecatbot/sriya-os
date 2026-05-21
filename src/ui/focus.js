@@ -1,4 +1,4 @@
-// Focus mode — DND screen for a single work block.
+// Focus mode · DND screen for a single work block.
 // Mino quiet, petals calmed, only the task + timer.
 
 import { el, clear, toast } from '../utils/dom.js';
@@ -62,7 +62,7 @@ function build() {
         ]),
   ]));
 
-  // Ambient sound toggle (lo-fi via a free CDN audio loop — optional)
+  // Ambient sound toggle (lo-fi via a free CDN audio loop · optional)
   wrap.appendChild(el('div', { style: { marginTop: 'var(--space-4)' } }, [
     el('button', {
       class: 'btn btn--soft', id: 'focus-sound',
@@ -94,7 +94,7 @@ function toggleSound() {
     return;
   }
   if (!audioEl) {
-    // Soft rain — free / royalty-free loop
+    // Soft rain · free / royalty-free loop
     audioEl = new Audio('https://cdn.pixabay.com/audio/2022/03/15/audio_8c9f927a08.mp3');
     audioEl.loop = true;
     audioEl.volume = 0.3;

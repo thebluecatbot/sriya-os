@@ -1,4 +1,4 @@
-// Tasks tab — negotiable + non-negotiable in one place.
+// Tasks tab · negotiable + non-negotiable in one place.
 // Pipeline buckets (Today / Soon / Someday / Done), quick add, brain dump,
 // full edit sheet, recurring tasks editor, non-negotiables editor,
 // night-plan ritual.
@@ -8,6 +8,7 @@ import { getState, update, subscribe, uid, TODAY } from '../state.js';
 import { fmtMinutes, todayKey } from '../utils/format.js';
 import { parseTask, parseBrainDump } from '../utils/parse-task.js';
 import { pendingDays } from '../utils/recurrence.js';
+import { currentUser } from '../auth.js';
 
 function tomorrowKey() {
   const d = new Date();
@@ -124,7 +125,7 @@ function pickMainThing() {
   const candidates = s.tasks.negotiable.filter((t) => t.status !== 'done' && (t.category === 'Today' || t.category === 'Soon'));
   if (candidates.length === 0) { toast('add a task first'); return; }
   openSheet(el('div', { class: 'stack' }, [
-    el('p', { class: 'muted' }, 'just one — the rest is bonus.'),
+    el('p', { class: 'muted' }, 'just one · the rest is bonus.'),
     ...candidates.map((t) => el('button', {
       class: 'card', style: { textAlign: 'left', width: '100%', cursor: 'pointer' },
       onClick: () => {
@@ -147,7 +148,7 @@ function pickMainThing() {
 function quickAddRow() {
   const input = el('input', {
     class: 'input', type: 'text',
-    placeholder: 'add a task — "kal call amma 20min #social"',
+    placeholder: 'add a task · "kal call amma 20min #social"',
     'aria-label': 'Quick add task',
   });
   function doAdd() {
@@ -162,6 +163,7 @@ function quickAddRow() {
         person: 'sriya', subtasks: [], status: 'open',
         linkedModule: p.linkedModule || null,
         createdAt: new Date().toISOString(),
+        addedBy: currentUser(),
       });
     });
     input.value = '';
@@ -176,9 +178,9 @@ function quickAddRow() {
 
 function emptyStateCard(bucket) {
   const blurb = {
-    Today:   'nothing for today — quick add above ✿',
+    Today:   'nothing for today · quick add above ✿',
     Soon:    'no upcoming tasks. add some, slowly.',
-    Someday: 'someday-list is empty — that\'s fine, too.',
+    Someday: 'someday-list is empty · that\'s fine, too.',
     Done:    'no completed tasks yet. one tick is enough.',
   }[bucket];
   return el('div', { class: 'card empty' }, [
@@ -194,7 +196,8 @@ function taskCard(t, s) {
   const overdue = !isDone && t.due && t.due < todayKey();
 
   const card = el('div', {
-    class: 'card', dataset: { taskId: t.id },
+    class: 'card',
+    dataset: t.addedBy === 'prakhar' ? { taskId: t.id, addedBy: 'prakhar' } : { taskId: t.id },
     style: { padding: '12px 14px' }
   });
 
@@ -308,7 +311,7 @@ export function openFullAdd() {
 }
 
 // ──────────────────────────────────────────────────────────────
-// Night-plan ritual — "plan tomorrow"
+// Night-plan ritual · "plan tomorrow"
 // ──────────────────────────────────────────────────────────────
 export function openNightPlan() {
   const today = todayKey();
@@ -316,7 +319,7 @@ export function openNightPlan() {
 
   const carryList = el('div', { class: 'stack' });
   const tmrwList = el('div', { class: 'stack' });
-  const addInput = el('input', { class: 'input', placeholder: 'add one — "yoga 20min", "iron stock check"', 'aria-label': 'Add tomorrow task' });
+  const addInput = el('input', { class: 'input', placeholder: 'add one · "yoga 20min", "iron stock check"', 'aria-label': 'Add tomorrow task' });
 
   function paint() {
     const s = getState();
@@ -332,7 +335,7 @@ export function openNightPlan() {
 
     // Tomorrow = tasks with due=tomorrow
     const tmrwTasks = s.tasks.negotiable.filter((t) => t.status !== 'done' && t.due === tmrw);
-    if (tmrwTasks.length === 0) tmrwList.appendChild(el('p', { class: 'muted', style: { margin: 0 } }, 'nothing planned yet — add 3 things, no more.'));
+    if (tmrwTasks.length === 0) tmrwList.appendChild(el('p', { class: 'muted', style: { margin: 0 } }, 'nothing planned yet · add 3 things, no more.'));
     else tmrwTasks.forEach((t) => tmrwList.appendChild(carryRow(t, () => unmoveFromTomorrow(t), paint, true)));
   }
 
@@ -364,6 +367,7 @@ export function openNightPlan() {
         person: 'sriya', subtasks: [], status: 'open',
         linkedModule: p.linkedModule || null,
         createdAt: new Date().toISOString(),
+        addedBy: currentUser(),
       });
     });
     addInput.value = '';
@@ -437,6 +441,7 @@ export function openEditSheet(existing) {
     estMins: null, priority: 'soon', energy: 'light',
     person: 'sriya', subtasks: [], status: 'open',
     linkedModule: null, createdAt: new Date().toISOString(),
+    addedBy: currentUser(),
   };
   const fTitle = el('input', { class: 'input', value: t.title, placeholder: 'what is it?', 'aria-label': 'Title' });
   const fEmoji = el('input', { class: 'input', value: t.emoji || '', maxlength: 2, style: { width: '64px' }, placeholder: '✿' });
@@ -490,7 +495,7 @@ export function openEditSheet(existing) {
       labeled('finish-by timer (min)', fCompletion),
     ]),
 
-    // "start now" — only for existing tasks; sets timerStartedAt and auto-starts activity timer
+    // "start now" · only for existing tasks; sets timerStartedAt and auto-starts activity timer
     existing ? el('button', {
       class: 'btn btn--soft btn--block',
       onClick: async () => {
@@ -560,7 +565,7 @@ function labeled(label, control) {
 function openBrainDump() {
   const ta = el('textarea', {
     class: 'input', rows: 8,
-    placeholder: 'one task per line — paste a list, ramble, voice-to-text… we split it.',
+    placeholder: 'one task per line · paste a list, ramble, voice-to-text… we split it.',
   });
   const preview = el('div', { class: 'stack' });
   let parsed = [];
@@ -627,7 +632,7 @@ function recurringCard(s) {
         ]),
         el('button', { class: 'btn btn--soft', onClick: () => openRecurringEdit(r) }, 'edit')
       ])
-    )) : el('p', { class: 'muted', style: { margin: 0 } }, 'no recurring tasks yet — set up daily/weekly habits below.'),
+    )) : el('p', { class: 'muted', style: { margin: 0 } }, 'no recurring tasks yet · set up daily/weekly habits below.'),
     el('button', { class: 'btn btn--ghost', style: { marginTop: '8px' }, onClick: () => openRecurringEdit(null) }, '+ add recurring'),
   ]);
 }
@@ -718,7 +723,7 @@ function nonNegotiablesCard(s) {
       el('i', { class: 'ph-duotone ph-flower' }),
       'non-negotiables', el('small', null, `${done}/${total}`)
     ]),
-    el('p', { class: 'muted', style: { margin: '0 0 6px' } }, 'daily baseline — tick on Today, edit here.'),
+    el('p', { class: 'muted', style: { margin: '0 0 6px' } }, 'daily baseline · tick on Today, edit here.'),
     el('button', { class: 'btn btn--ghost', onClick: () => openNonNegEditor() }, [
       el('i', { class: 'ph ph-pencil-simple' }), ' edit'
     ]),
@@ -813,7 +818,7 @@ function endOfDayCard(s) {
       'today, gently', el('small', null, `${pct}%`)
     ]),
     el('p', { class: 'muted', style: { margin: 0 } },
-      total === 0 ? 'add anything — even one tiny thing is enough.' :
+      total === 0 ? 'add anything · even one tiny thing is enough.' :
       pct === 100 ? 'all today-tasks done. enjoy the dusk ✿' :
       `${done} done, ${total - done} pending. carries to tomorrow, no shame.`),
   ]);

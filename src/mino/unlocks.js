@@ -1,4 +1,4 @@
-// Mino reward unlocks — cute accessories earned at consistency milestones.
+// Mino reward unlocks · cute accessories earned at consistency milestones.
 // Never taken away. Celebrated by Mino on unlock.
 
 import { getState, update, subscribe, uid } from '../state.js';
@@ -61,7 +61,7 @@ export function mountUnlocks() {
       }
     }, { silent: true });
     for (const u of newly) {
-      toast(`✦ unlocked: ${u.emoji} ${u.label} — ${u.why}`, 4000);
+      toast(`✦ unlocked: ${u.emoji} ${u.label} · ${u.why}`, 4000);
     }
   };
   subscribe(tick);

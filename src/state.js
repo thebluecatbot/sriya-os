@@ -1,19 +1,22 @@
 // State + persistence layer.
-// localStorage is the working store. Neon mirror via /api/state.
-// One STATE blob — modules are slots underneath.
+// localStorage is the working store. Postgres mirror via /api/state.
+// One STATE blob, modules are slots underneath.
 
 import { todayKey } from './utils/format.js';
+import { namespaceKey } from './auth.js';
 
+// Both real users share Sriya's namespace so they see the same data.
+// Guest-name URL param kept as an escape hatch for read-only previews.
 const URL_PARAMS = new URLSearchParams(location.search);
 const GUEST = URL_PARAMS.get('guest');
-const NS = GUEST ? `guest.${slug(GUEST)}.v3` : 'sriya.v3';
+const NS = GUEST ? `guest.${slug(GUEST)}.v3` : namespaceKey();
 export const IS_GUEST = !!GUEST;
 export const GUEST_NAME = GUEST || null;
 
 function slug(s) { return String(s).toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 32); }
 
 // ──────────────────────────────────────────────────────────────
-// Default empty state — every module gets a slot, even if Wave 1 doesn't fill it.
+// Default empty state · every module gets a slot, even if Wave 1 doesn't fill it.
 // (Schema sketched from §16 of the spec; freely extended in later waves.)
 // ──────────────────────────────────────────────────────────────
 function defaults() {
@@ -172,7 +175,7 @@ function notify() {
 }
 
 // mutator: pass a function that mutates a draft (Immer-lite, copy first)
-// IMPORTANT: only adopt the mutator's return value if it's a real object —
+// IMPORTANT: only adopt the mutator's return value if it's a real object ·
 // arrow expressions like `(d) => d.x.push(y)` return a number (push() length)
 // and would otherwise corrupt state.
 export function update(mutator, { silent = false } = {}) {
@@ -208,7 +211,7 @@ async function syncToNeon() {
       body: JSON.stringify({ ns: NS, state: _state, ts: Date.now() }),
     });
     if (!res.ok) console.warn('state: sync POST failed', res.status);
-  } catch (e) { /* offline — keep going */ }
+  } catch (e) { /* offline · keep going */ }
 }
 
 async function loadFromNeon() {
@@ -219,7 +222,7 @@ async function loadFromNeon() {
     if (!res.ok) return null;
     const data = await res.json();
     if (data && data.state && typeof data.state === 'object') return data.state;
-  } catch (e) { /* offline or 404 — fine */ }
+  } catch (e) { /* offline or 404 · fine */ }
   return null;
 }
 

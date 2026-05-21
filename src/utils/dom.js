@@ -1,4 +1,4 @@
-// Tiny DOM helpers — no framework, just sugar. (v2 - children flattening)
+// Tiny DOM helpers · no framework, just sugar. (v2 - children flattening)
 
 export function el(tag, attrs = {}, children = []) {
   const node = document.createElement(tag);

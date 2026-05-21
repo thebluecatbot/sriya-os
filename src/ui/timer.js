@@ -1,4 +1,4 @@
-// Timer tab — full activity tracking.
+// Timer tab · full activity tracking.
 // Sticky bar (in shell) reads timer.active. Here we render the full controls,
 // recent log, 24h timeline strip, today's totals, category split, weekly heatmap.
 
@@ -89,7 +89,7 @@ function elapsedMs(active) {
   return Date.now() - Date.parse(active.startedAt) - pause;
 }
 
-// Forgot-to-stop guard — Mino check-in is wired in mascot.js;
+// Forgot-to-stop guard · Mino check-in is wired in mascot.js;
 // here we just expose the threshold check helper.
 export function isStaleTimer(s, hours = 3) {
   const a = s?.timer?.active;
@@ -169,7 +169,7 @@ function startBlock(s) {
     toast('tracking ✿');
   }
 
-  // Quick-start chips by category (one-tap) — labelled "switch to X" when a timer is active.
+  // Quick-start chips by category (one-tap) · labelled "switch to X" when a timer is active.
   const hasActive = !!s.timer.active;
   const quick = el('div', { class: 'row', style: { flexWrap: 'wrap', gap: '6px' } },
     s.timer.categories.map((c) => {
@@ -398,7 +398,7 @@ function logCard(s) {
         const cat = s.timer.categories.find((c) => c.id === e.categoryId);
         return el('div', { class: 'row row--between' }, [
           el('div', null, [
-            el('div', null, [e.label || cat?.label || '—']),
+            el('div', null, [e.label || cat?.label || '·']),
             el('div', { class: 'muted', style: { fontSize: '0.7rem' } },
               `${cat?.emoji || ''} ${cat?.label || ''} · ${e.date} · ${new Date(e.start).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`),
           ]),

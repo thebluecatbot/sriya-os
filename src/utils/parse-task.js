@@ -1,4 +1,4 @@
-// Shared lightweight parser — text → task fields.
+// Shared lightweight parser · text → task fields.
 // Understands English / Hindi-roman / Telugu-roman date words.
 // Used by quick-capture and the brain-dump box.
 
@@ -35,7 +35,7 @@ export function parseTask(s) {
   if (/\b(heavy|deep|focus|hard|tough|mushkil)\b/.test(lower)) out.energy = 'heavy';
   else if (/\b(light|quick|easy|chhota|chinna)\b/.test(lower))  out.energy = 'light';
 
-  // Tag detection — single-line categories like #upsc, #substack
+  // Tag detection · single-line categories like #upsc, #substack
   const tagged = lower.match(/#(upsc|mtp|substack|reading|exercise|class|lab|social|rest|other)\b/);
   if (tagged) {
     out.linkedModule = { kind: tagged[1], id: null };

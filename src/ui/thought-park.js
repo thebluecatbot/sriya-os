@@ -1,9 +1,10 @@
-// Thought-park inbox — one place to park stray/spiraling thoughts.
+// Thought-park inbox · one place to park stray/spiraling thoughts.
 // Triage to task / idea / journal line / delete.
 
 import { el, clear, openSheet, closeSheet, toast } from '../utils/dom.js';
 import { getState, subscribe, update, uid, TODAY } from '../state.js';
 import { relative, todayKey } from '../utils/format.js';
+import { currentUser } from '../auth.js';
 
 let pageSize = 30;
 
@@ -22,12 +23,12 @@ function build() {
   wrap.appendChild(el('h1', null, ['thought-park ', el('i', { class: 'ph-duotone ph-cloud', style: { color: 'var(--primary)', fontSize: '1.5rem' } })]));
 
   // Quick add
-  const input = el('input', { class: 'input', placeholder: 'park a thought — type or speak', 'aria-label': 'Park a thought' });
+  const input = el('input', { class: 'input', placeholder: 'park a thought · type or speak', 'aria-label': 'Park a thought' });
   function doAdd() {
     const v = input.value.trim();
     if (!v) return;
     update((d) => {
-      d.thoughtPark.items.unshift({ id: uid('p'), text: v, date: new Date().toISOString(), triaged: false });
+      d.thoughtPark.items.unshift({ id: uid('p'), text: v, date: new Date().toISOString(), triaged: false, addedBy: currentUser() });
     });
     input.value = '';
   }
@@ -46,7 +47,7 @@ function build() {
   if (items.length === 0) {
     wrap.appendChild(el('div', { class: 'card empty' }, [
       el('div', { class: 'empty__art' }, [el('i', { class: 'ph-duotone ph-cloud' })]),
-      el('p', null, 'empty park ✿ — that\'s perfectly fine.'),
+      el('p', null, 'empty park ✿ · that\'s perfectly fine.'),
     ]));
   } else {
     items.forEach((i) => wrap.appendChild(itemCard(i)));
@@ -64,7 +65,11 @@ function build() {
 }
 
 function itemCard(i) {
-  return el('div', { class: 'card', style: { padding: '12px 14px' } }, [
+  return el('div', {
+    class: 'card',
+    dataset: i.addedBy === 'prakhar' ? { addedBy: 'prakhar' } : {},
+    style: { padding: '12px 14px' }
+  }, [
     el('div', { style: { whiteSpace: 'pre-wrap' } }, i.text),
     el('div', { class: 'row', style: { gap: '6px', marginTop: '8px', flexWrap: 'wrap' } }, [
       el('span', { class: 'chip', style: { fontSize: '0.7rem' } }, relative(Date.parse(i.date))),

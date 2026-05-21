@@ -6,8 +6,10 @@ import { getState, subscribe } from '../state.js';
 import { openCapture } from './capture.js';
 import { navigate, onRoute } from '../router.js';
 
+import { canAccess } from '../auth.js';
+
 // All modules grouped for sidebar + drawer + Today grid
-export const MODULE_GROUPS = [
+export const RAW_MODULE_GROUPS = [
   {
     label: 'daily',
     modules: [
@@ -49,6 +51,11 @@ export const MODULE_GROUPS = [
   },
 ];
 
+// Visible modules: filter out anything the current user can't access (e.g. /journal for Prakhar)
+export const MODULE_GROUPS = RAW_MODULE_GROUPS
+  .map((g) => ({ ...g, modules: g.modules.filter((m) => canAccess(m.path)) }))
+  .filter((g) => g.modules.length > 0);
+
 // Flat list for sidebar + drawer (excludes Today since it's the homepage)
 const MORE_LINKS = MODULE_GROUPS.flatMap((g) => g.modules)
   .filter((m) => !['/today','/tasks','/timer','/mino','/me'].includes(m.path));
@@ -74,7 +81,7 @@ export function mountShell() {
   // Sticky activity bar
   mountActivityBar();
 
-  // "More" drawer — long press / right-click Tasks tab; or via a small more button
+  // "More" drawer · long press / right-click Tasks tab; or via a small more button
   // (For now, a sheet with all secondary modules opens from a button in Today and from Me.)
   window.openMoreDrawer = openMoreDrawer;
 }

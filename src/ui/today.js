@@ -1,4 +1,4 @@
-// Today dashboard — the screen Sriya sees on every open.
+// Today dashboard · the screen Sriya sees on every open.
 // Pulls live from every module. Each card deep-links into its source.
 
 import { $, el, clear, bloomAt, haptic } from '../utils/dom.js';
@@ -145,7 +145,7 @@ function nonNegotiablesCard(s) {
   return card;
 }
 
-// 4. Top 3 tasks (with "one main thing" flagged) — energy-aware order
+// 4. Top 3 tasks (with "one main thing" flagged) · energy-aware order
 function topTasksCard(s) {
   const today = todayKey();
   const main = s.tasks.mainThingByDate[today];
@@ -171,7 +171,7 @@ function topTasksCard(s) {
       ])
     )) : el('div', { class: 'empty' }, [
       el('div', { class: 'empty__art' }, '✿'),
-      el('p', null, 'no tasks yet — quick capture below'),
+      el('p', null, 'no tasks yet · quick capture below'),
       el('button', { class: 'btn', onClick: () => openCapture() }, 'add one'),
     ])
   ]);
@@ -222,7 +222,7 @@ function medsCard(s) {
   ]);
 }
 
-// 6. Revisions due (UPSC) — Wave 4 fleshes this out
+// 6. Revisions due (UPSC) · Wave 4 fleshes this out
 function revisionsCard(s) {
   const due = (s.upsc.revisions || []).filter((r) => r.dueDate === todayKey() && !r.done);
   return el('div', { class: 'card' }, [
@@ -232,7 +232,7 @@ function revisionsCard(s) {
           el('span', null, r.topic || r.label),
           el('span', { class: 'chip', style: { marginLeft: 'auto' } }, r.stage || 'R1'),
         ])))
-      : el('p', { class: 'muted', style: { margin: 0 } }, 'no UPSC revisions today — set up the syllabus tree in Wave 4.')
+      : el('p', { class: 'muted', style: { margin: 0 } }, 'no UPSC revisions today · set up the syllabus tree in Wave 4.')
   ]);
 }
 
@@ -242,7 +242,7 @@ function timerCard(s) {
   return el('div', { class: 'card' }, [
     el('div', { class: 'card__title' }, [ico('ph-timer'), 'timer', el('small', null, t ? 'live' : 'idle')]),
     t
-      ? el('p', { style: { margin: 0 } }, [el('strong', null, t.label || t.categoryLabel || 'tracking'), ' — see bar above'])
+      ? el('p', { style: { margin: 0 } }, [el('strong', null, t.label || t.categoryLabel || 'tracking'), ' · see bar above'])
       : el('div', null, [
           el('p', { class: 'muted', style: { margin: '0 0 8px' } }, 'no activity tracked right now.'),
           el('a', { class: 'btn btn--ghost', href: '#/timer' }, 'open Timer'),
@@ -250,7 +250,7 @@ function timerCard(s) {
   ]);
 }
 
-// 8. Schedule strip — Wave 2 fleshes the calendar
+// 8. Schedule strip · Wave 2 fleshes the calendar
 function scheduleStripCard(s) {
   const today = todayKey();
   const evts = (s.calendar.events || []).filter((e) => e.date === today).sort((a, b) => (a.start || '').localeCompare(b.start || ''));
@@ -258,10 +258,10 @@ function scheduleStripCard(s) {
     el('div', { class: 'card__title' }, [ico('ph-calendar-heart'), 'schedule', el('small', null, evts.length ? `${evts.length} blocks` : 'open')]),
     evts.length
       ? el('div', { class: 'stack' }, evts.slice(0, 4).map((e) => el('div', { class: 'card__row' }, [
-          el('span', { class: 'chip' }, e.start || '—'),
+          el('span', { class: 'chip' }, e.start || '·'),
           el('span', null, e.title),
         ])))
-      : el('p', { class: 'muted', style: { margin: 0 } }, 'nothing scheduled today — calendar opens in Wave 2.')
+      : el('p', { class: 'muted', style: { margin: 0 } }, 'nothing scheduled today · calendar opens in Wave 2.')
   ]);
 }
 
@@ -271,7 +271,7 @@ function journalNudge(s) {
   const wrote = (s.journal.entries || []).some((j) => j.date === day);
   return el('a', { class: 'card', href: '#/journal', style: { display: 'block' } }, [
     el('div', { class: 'card__title' }, [ico('ph-notebook'), 'journal', el('small', null, wrote ? 'wrote today ✓' : 'gentle nudge')]),
-    el('p', { class: 'muted', style: { margin: 0 } }, wrote ? say('praise_specific', { fact: 'journaled' }) : 'one or two lines — even bad day mein bhi ♡'),
+    el('p', { class: 'muted', style: { margin: 0 } }, wrote ? say('praise_specific', { fact: 'journaled' }) : 'one or two lines · even bad day mein bhi ♡'),
   ]);
 }
 
@@ -284,7 +284,7 @@ function doneJarPeek(s) {
     items.length
       ? el('div', { class: 'row', style: { flexWrap: 'wrap', gap: '6px' } },
           items.slice(-8).map((i) => el('span', { class: 'chip chip--primary' }, i.label || 'done')))
-      : el('p', { class: 'muted', style: { margin: 0 } }, 'every tick lands here — no output = no rest is a lie.'),
+      : el('p', { class: 'muted', style: { margin: 0 } }, 'every tick lands here · no output = no rest is a lie.'),
   ]);
 }
 
@@ -292,7 +292,7 @@ function doneJarPeek(s) {
 function blockCard(s) {
   const b = s.block || {};
   return el('div', { class: 'card' }, [
-    el('div', { class: 'card__title' }, [ico('ph-target'), 'this block', el('small', null, b.endsOn || '—')]),
+    el('div', { class: 'card__title' }, [ico('ph-target'), 'this block', el('small', null, b.endsOn || '·')]),
     el('p', { style: { margin: '0 0 6px' } }, b.label || 'no current block set'),
     b.focus ? el('p', { class: 'muted', style: { margin: 0 } }, `focus: ${b.focus}`) : null,
     el('button', { class: 'btn btn--ghost', style: { marginTop: '8px' }, onClick: () => editBlock() }, b.label ? 'edit' : 'set block'),

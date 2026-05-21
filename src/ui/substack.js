@@ -1,4 +1,4 @@
-// Substack / Content — idea inbox · pipeline · draft editor · research locker ·
+// Substack / Content · idea inbox · pipeline · draft editor · research locker ·
 // video-blog fields · content calendar · swipe file · repurpose tracker.
 
 import { el, clear, openSheet, closeSheet, toast } from '../utils/dom.js';
@@ -78,7 +78,7 @@ function pipelineView(s) {
         el('small', null, `${list.length}`)
       ]),
       list.length === 0
-        ? el('p', { class: 'muted', style: { margin: 0, fontSize: '0.75rem' } }, '—')
+        ? el('p', { class: 'muted', style: { margin: 0, fontSize: '0.75rem' } }, '·')
         : el('div', { class: 'stack' }, list.map((p) => pieceRow(p)))
     ]));
   });
@@ -118,7 +118,7 @@ function moveStage(id, stage) {
 // ─── Ideas view ───
 function ideasView(s) {
   const ideas = s.substack.ideas || [];
-  const inp = el('input', { class: 'input', placeholder: 'one-line idea — voice or type', 'aria-label': 'Idea' });
+  const inp = el('input', { class: 'input', placeholder: 'one-line idea · voice or type', 'aria-label': 'Idea' });
   const voiceBtn = el('button', { class: 'btn btn--soft', onClick: () => startVoice(inp) }, [el('i', { class: 'ph-fill ph-microphone' }), ' voice']);
   function doAdd() {
     const v = inp.value.trim();
@@ -134,7 +134,7 @@ function ideasView(s) {
       el('div', { class: 'row', style: { gap: '6px' } }, [inp, voiceBtn, el('button', { class: 'btn', onClick: doAdd }, '+')]),
     ]),
     ideas.length === 0
-      ? el('div', { class: 'card empty' }, [el('div', { class: 'empty__art' }, [el('i', { class: 'ph-duotone ph-lightbulb' })]), el('p', null, 'no ideas yet — drop anything ✿')])
+      ? el('div', { class: 'card empty' }, [el('div', { class: 'empty__art' }, [el('i', { class: 'ph-duotone ph-lightbulb' })]), el('p', null, 'no ideas yet · drop anything ✿')])
       : el('div', { class: 'stack' }, ideas.slice(0, 50).map((i) => el('div', { class: 'card', style: { padding: '10px' } }, [
           el('div', { style: { whiteSpace: 'pre-wrap' } }, i.text),
           el('div', { class: 'muted', style: { fontSize: '0.7rem', marginTop: '4px' } }, relative(Date.parse(i.createdAt))),
@@ -169,7 +169,7 @@ function draftsView(s) {
   if (drafts.length === 0) {
     return el('div', { class: 'card empty' }, [
       el('div', { class: 'empty__art' }, [el('i', { class: 'ph-duotone ph-files' })]),
-      el('p', null, 'no drafts yet — start one ✿'),
+      el('p', null, 'no drafts yet · start one ✿'),
       el('button', { class: 'btn', onClick: () => createPiece('post') }, '+ new draft'),
     ]);
   }
@@ -203,7 +203,7 @@ function calendarView(s) {
     ]),
     el('div', { class: 'card' }, [
       el('div', { class: 'card__title' }, [el('i', { class: 'ph-duotone ph-check-circle' }), 'published', el('small', null, `${published.length}`)]),
-      el('p', { class: 'muted', style: { fontSize: '0.7rem', margin: 0 } }, 'shipped this period — a soft count, not a target.'),
+      el('p', { class: 'muted', style: { fontSize: '0.7rem', margin: 0 } }, 'shipped this period · a soft count, not a target.'),
       el('div', { class: 'stack', style: { marginTop: '8px' } }, published.slice(0, 20).map((p) => el('div', { class: 'row row--between' }, [
         el('span', null, p.title),
         el('span', { class: 'muted', style: { fontSize: '0.7rem' } }, (p.publishedAt || '').slice(0, 10)),
@@ -221,7 +221,7 @@ function swipeView(s) {
       el('p', { class: 'muted', style: { margin: 0, fontSize: '0.75rem' } }, 'saved headlines, hooks, structures.'),
       el('button', { class: 'btn btn--ghost', style: { marginTop: '8px' }, onClick: () => addSwipe() }, '+ add'),
     ]),
-    swipes.length === 0 ? el('p', { class: 'muted', style: { textAlign: 'center' } }, 'empty — paste a great headline or hook.') :
+    swipes.length === 0 ? el('p', { class: 'muted', style: { textAlign: 'center' } }, 'empty · paste a great headline or hook.') :
       el('div', { class: 'stack' }, swipes.map((sw) => el('div', { class: 'card', style: { padding: '10px' } }, [
         el('div', { style: { whiteSpace: 'pre-wrap', fontStyle: 'italic' } }, `"${sw.text}"`),
         el('div', { class: 'muted', style: { fontSize: '0.7rem', marginTop: '4px' } }, sw.source || ''),
@@ -286,7 +286,7 @@ function pieceEditor(s, id) {
   return wrap;
 }
 
-// Body — main editor with autosave + word count + reading time + copy markdown
+// Body · main editor with autosave + word count + reading time + copy markdown
 function bodyTab(p) {
   const ta = el('textarea', {
     class: 'input', rows: 18, value: p.body || '', spellcheck: 'true', 'aria-label': 'Draft body',
@@ -386,7 +386,7 @@ function researchTab(p) {
       el('button', { class: 'btn btn--soft', onClick: () => addResearch(p.id, 'screen') }, '+ screenshot'),
       el('button', { class: 'btn btn--soft', onClick: () => addResearch(p.id, 'voice') },  '+ voice note'),
     ]),
-    items.length === 0 ? el('p', { class: 'muted', style: { margin: '8px 0 0' } }, 'empty — drop quotes from Reading, links from anywhere.') :
+    items.length === 0 ? el('p', { class: 'muted', style: { margin: '8px 0 0' } }, 'empty · drop quotes from Reading, links from anywhere.') :
       el('div', { class: 'stack', style: { marginTop: '8px' } }, items.map((r, i) => el('div', { class: 'card', style: { padding: '8px' } }, [
         el('div', null, [el('span', { class: 'chip', style: { fontSize: '0.65rem', marginRight: '6px' } }, r.kind), r.text || r.url]),
         r.source ? el('div', { class: 'muted', style: { fontSize: '0.7rem' } }, r.source) : null,
@@ -505,7 +505,7 @@ function versionsTab(p) {
   if (versions.length === 0) {
     return el('div', { class: 'card empty' }, [
       el('div', { class: 'empty__art' }, [el('i', { class: 'ph-duotone ph-clock-counter-clockwise' })]),
-      el('p', null, 'no snapshots yet — hit "snapshot" in the body tab to save one.'),
+      el('p', null, 'no snapshots yet · hit "snapshot" in the body tab to save one.'),
     ]);
   }
   return el('div', { class: 'card' }, [

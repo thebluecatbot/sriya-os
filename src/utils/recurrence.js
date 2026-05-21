@@ -1,5 +1,5 @@
 // Daily tick: spawn recurring task instances, run carry-over,
-// run timer forgot-to-stop guard. Idempotent — safe to call on every app open.
+// run timer forgot-to-stop guard. Idempotent · safe to call on every app open.
 
 import { todayKey } from './format.js';
 

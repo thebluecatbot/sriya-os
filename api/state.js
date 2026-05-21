@@ -1,4 +1,4 @@
-// /api/state — GET ?ns=...  POST { ns, state, ts }
+// /api/state · GET ?ns=...  POST { ns, state, ts }
 // Stores a single JSON blob per namespace in Postgres (Supabase / Neon / any pg).
 // Free-tier friendly: one table, JSONB column.
 
@@ -25,7 +25,7 @@ export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
 
   if (!sql) {
-    // No DB configured — return soft response so the app keeps working offline.
+    // No DB configured · return soft response so the app keeps working offline.
     if (req.method === 'GET') return res.status(200).json({ state: null, offline: true });
     return res.status(200).json({ ok: true, offline: true });
   }
