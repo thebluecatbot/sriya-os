@@ -1,7 +1,7 @@
 // Me / settings tab · theme variant, a11y, backup, language, reset.
 
 import { $, el, clear, toast } from '../utils/dom.js';
-import { getState, update, subscribe, exportAll, importAll, resetAll, IS_GUEST, GUEST_NAME } from '../state.js';
+import { getState, update, subscribe, exportAll, importAll, resetAll, syncNow, IS_GUEST, GUEST_NAME } from '../state.js';
 import { currentUserDisplay, isCopilot, logout } from '../auth.js';
 
 const THEMES = [
@@ -113,6 +113,27 @@ function buildMe() {
           }, label)
         )
       )
+    ]),
+
+    // Sync status + manual sync trigger
+    el('div', { class: 'card' }, [
+      el('div', { class: 'card__title' }, [
+        el('i', { class: 'ph-duotone ph-cloud-arrow-up' }),
+        'cloud sync',
+        el('small', null, s.updatedAt ? `last touched ${new Date(s.updatedAt).toLocaleTimeString()}` : 'never')
+      ]),
+      el('p', { class: 'muted', style: { margin: '0 0 8px', fontSize: '0.75rem' } },
+        'everything you change auto-syncs ~1s later. open the same account on another device and pull latest with this button.'),
+      el('button', { class: 'btn btn--block', onClick: async () => {
+        toast('syncing…');
+        try {
+          const r = await syncNow();
+          toast(r.action || 'synced ✓');
+          setTimeout(() => location.reload(), 400);
+        } catch (e) {
+          toast('sync failed · try again');
+        }
+      } }, [el('i', { class: 'ph-fill ph-arrows-clockwise' }), ' sync now']),
     ]),
 
     // Backup & data

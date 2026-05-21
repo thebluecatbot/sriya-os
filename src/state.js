@@ -182,6 +182,8 @@ export function update(mutator, { silent = false } = {}) {
   const draft = JSON.parse(JSON.stringify(_state));
   const res = mutator(draft);
   _state = (res && typeof res === 'object' && !Array.isArray(res)) ? res : draft;
+  // Auto-stamp every change so remote-vs-local merge is reliable.
+  _state.updatedAt = new Date().toISOString();
   if (!silent) notify();
   schedulePersist();
 }
@@ -242,7 +244,11 @@ async function loadFromNeon() {
     const res = await fetch(`/api/state?ns=${encodeURIComponent(NS)}`, { cache: 'no-store' });
     if (!res.ok) return null;
     const data = await res.json();
-    if (data && data.state && typeof data.state === 'object') return data.state;
+    if (data && data.state && typeof data.state === 'object') {
+      // Tag remote state with the server-side updated_at so merge is honest.
+      if (data.updatedAt && !data.state.updatedAt) data.state.updatedAt = data.updatedAt;
+      return data.state;
+    }
   } catch (e) { /* offline or 404 · fine */ }
   return null;
 }
@@ -255,18 +261,50 @@ export async function initState() {
   _state = local ? deepMerge(defaults(), local) : defaults();
   notify();
 
+  // Background pull: if Supabase has a newer copy, take it.
   loadFromNeon().then((remote) => {
-    if (!remote) return;
-    const localTs = local ? Date.parse(local.lastTouched || 0) : 0;
-    const remoteTs = Date.parse(remote.lastTouched || 0);
+    if (!remote) {
+      console.log('[sync] no remote state yet');
+      return;
+    }
+    const localTs = Date.parse(local?.updatedAt || local?.lastTouched || 0) || 0;
+    const remoteTs = Date.parse(remote.updatedAt || remote.lastTouched || 0) || 0;
+    console.log('[sync] localTs=' + new Date(localTs).toISOString() + ' remoteTs=' + new Date(remoteTs).toISOString());
+    // Take remote if it is strictly newer, OR if we have no local stamp at all.
+    if (remoteTs > localTs || (!localTs && remoteTs > 0)) {
+      _state = deepMerge(defaults(), remote);
+      saveLocal(_state);
+      notify();
+      console.log('[sync] pulled remote · local replaced');
+    } else if (localTs > remoteTs) {
+      // Local is newer · push it up.
+      console.log('[sync] local newer · pushing to remote');
+      scheduleSync();
+    } else {
+      console.log('[sync] in sync');
+    }
+  }).catch((e) => console.warn('[sync] load failed', e));
+
+  return _state;
+}
+
+// Manual sync trigger — exposed for a "sync now" button in Me
+export async function syncNow() {
+  console.log('[sync] manual sync triggered');
+  flushSync();
+  await new Promise(r => setTimeout(r, 800));
+  const remote = await loadFromNeon();
+  if (remote) {
+    const localTs = Date.parse(_state?.updatedAt || 0) || 0;
+    const remoteTs = Date.parse(remote.updatedAt || 0) || 0;
     if (remoteTs > localTs) {
       _state = deepMerge(defaults(), remote);
       saveLocal(_state);
       notify();
+      return { ok: true, action: 'pulled remote' };
     }
-  }).catch(() => {});
-
-  return _state;
+  }
+  return { ok: true, action: 'pushed local' };
 }
 
 // Mark "touched" before every persist so timestamps stay honest.
