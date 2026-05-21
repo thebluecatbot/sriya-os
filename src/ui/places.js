@@ -12,6 +12,9 @@ let sortMode = 'proximity'; // proximity | zone | status | price
 let pageSize = 40;
 
 export function renderPlaces(_params, host) {
+  // Seed BEFORE first paint (subscribers attach after first paint, so a seed
+  // update inside build() would notify nobody).
+  ensureSeed(getState());
   let unsub = null;
   const paint = () => { clear(host); host.appendChild(build()); };
   paint();
@@ -21,8 +24,6 @@ export function renderPlaces(_params, host) {
 
 function build() {
   const s = getState();
-  ensureSeed(s);
-
   const wrap = el('div', { class: 'stack' });
   wrap.appendChild(el('h1', null, ['places ', el('i', { class: 'ph-duotone ph-map-pin', style: { color: 'var(--primary)', fontSize: '1.5rem' } })]));
 
