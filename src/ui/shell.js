@@ -75,6 +75,13 @@ export function mountShell() {
     import('../mino/panel.js').then((m) => m.openMinoPanel());
   });
 
+  // More tab opens the modules drawer
+  const moreTab = $('.nav__tab[data-tab="more"]');
+  if (moreTab) moreTab.addEventListener('click', (e) => {
+    e.preventDefault();
+    openMoreDrawer();
+  });
+
   // Quick-capture FAB
   $('#capture-fab').addEventListener('click', openCapture);
 
@@ -117,6 +124,9 @@ function mountActivityBar() {
   setInterval(paint, 1000);
   paint();
 }
+
+// Make openMoreDrawer reachable from anywhere (e.g. Today's "more" button)
+export { openMoreDrawer };
 
 function mountSidebar() {
   const sidebar = $('#sidebar');
