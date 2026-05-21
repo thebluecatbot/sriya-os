@@ -51,14 +51,22 @@ export const RAW_MODULE_GROUPS = [
   },
 ];
 
-// Visible modules: filter out anything the current user can't access (e.g. /journal for Prakhar)
-export const MODULE_GROUPS = RAW_MODULE_GROUPS
-  .map((g) => ({ ...g, modules: g.modules.filter((m) => canAccess(m.path)) }))
-  .filter((g) => g.modules.length > 0);
-
-// Flat list for sidebar + drawer (excludes Today since it's the homepage)
-const MORE_LINKS = MODULE_GROUPS.flatMap((g) => g.modules)
-  .filter((m) => !['/today','/tasks','/timer','/mino','/me'].includes(m.path));
+// Visible modules: filter on every call so auth state at click-time is honoured.
+// (Computing at module-load time would freeze the list before auth.init() ran,
+//  which left the drawer empty.)
+export function getModuleGroups() {
+  return RAW_MODULE_GROUPS
+    .map((g) => ({ ...g, modules: g.modules.filter((m) => canAccess(m.path)) }))
+    .filter((g) => g.modules.length > 0);
+}
+// Back-compat: today.js still imports MODULE_GROUPS — expose it as a getter
+// proxy that returns the current value every time it's read.
+export const MODULE_GROUPS = new Proxy([], {
+  get(_target, prop) {
+    const current = getModuleGroups();
+    return typeof current[prop] === 'function' ? current[prop].bind(current) : current[prop];
+  },
+});
 
 export function mountShell() {
   mountSidebar();
@@ -133,7 +141,7 @@ function mountSidebar() {
   if (!sidebar) return;
   sidebar.innerHTML = '';
   sidebar.appendChild(el('div', { class: 'sidebar__title' }, 'sriya ✿'));
-  MODULE_GROUPS.forEach((group) => {
+  getModuleGroups().forEach((group) => {
     sidebar.appendChild(el('div', { class: 'sidebar__section' }, group.label));
     group.modules.forEach((m) => {
       sidebar.appendChild(el('a', { class: 'sidebar__link', href: `#${m.path}` }, [
@@ -156,7 +164,7 @@ function mountSidebar() {
 
 function openMoreDrawer() {
   const wrap = el('div', { class: 'stack' });
-  MODULE_GROUPS.forEach((group) => {
+  getModuleGroups().forEach((group) => {
     wrap.appendChild(el('div', { class: 'section-divider' }, group.label));
     wrap.appendChild(el('div', { class: 'modules-grid' },
       group.modules.map((m) => el('a', {

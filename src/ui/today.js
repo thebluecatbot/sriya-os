@@ -1,13 +1,14 @@
 // Today dashboard · the screen Sriya sees on every open.
 // Pulls live from every module. Each card deep-links into its source.
 
-import { $, el, clear, bloomAt, haptic } from '../utils/dom.js';
-import { getState, update, subscribe, TODAY } from '../state.js';
+import { $, el, clear, bloomAt, haptic, openSheet, closeSheet, toast } from '../utils/dom.js';
+import { getState, update, subscribe, uid, TODAY } from '../state.js';
 import { fmtClock, fmtDate, timeOfDay, todayKey, fmtMinutes } from '../utils/format.js';
 import { say } from '../mino/voice.js';
 import { nextAction } from '../mino/mascot.js';
 import { openCapture } from './capture.js';
-import { MODULE_GROUPS } from './shell.js';
+import { getModuleGroups } from './shell.js';
+import { currentUser } from '../auth.js';
 
 export function renderToday(_params, host) {
   let unsub = null;
@@ -54,7 +55,7 @@ function allModulesCard() {
       'all modules', el('small', null, 'one tap to anywhere')
     ]),
   ]);
-  MODULE_GROUPS.forEach((group) => {
+  getModuleGroups().forEach((group) => {
     card.appendChild(el('div', { class: 'field__label', style: { marginTop: '10px' } }, group.label));
     card.appendChild(el('div', { class: 'modules-grid' },
       group.modules.map((m) => el('a', {
@@ -98,7 +99,7 @@ function ico(name, weight = 'duotone') {
   return el('i', { class: `ph-${weight} ${name}`, 'aria-hidden': 'true' });
 }
 
-// 3. Non-negotiables (groupedchecklist)
+// 3. Non-negotiables (grouped checklist) — with inline add UI
 function nonNegotiablesCard(s) {
   const t = todayKey();
   const ticks = s.nonNegotiables.tickLog[t] || {};
@@ -107,7 +108,11 @@ function nonNegotiablesCard(s) {
   const pct = total ? Math.round((done / total) * 100) : 0;
 
   const card = el('div', { class: 'card' }, [
-    el('div', { class: 'card__title' }, [ico('ph-flower'), 'non-negotiables', el('small', null, `${done}/${total} • ${pct}%`)]),
+    el('div', { class: 'card__title' }, [
+      ico('ph-flower'),
+      'non-negotiables',
+      el('small', null, `${done}/${total} • ${pct}%`),
+    ]),
   ]);
 
   s.nonNegotiables.categories.forEach((cat) => {
@@ -128,9 +133,8 @@ function nonNegotiablesCard(s) {
           d.nonNegotiables.tickLog[day][task.id] = willBeDone;
           d.doneJar.byDate[day] = d.doneJar.byDate[day] || [];
           if (willBeDone) {
-            d.doneJar.byDate[day].push({ kind: 'nonneg', id: task.id, label: task.label, at: new Date().toISOString() });
+            d.doneJar.byDate[day].push({ kind: 'nonneg', id: task.id, label: task.label, at: new Date().toISOString(), addedBy: currentUser() });
           } else {
-            // Remove every matching done-jar entry so untick cleans up
             d.doneJar.byDate[day] = d.doneJar.byDate[day].filter((j) => !(j.kind === 'nonneg' && j.id === task.id));
           }
         });
@@ -142,7 +146,111 @@ function nonNegotiablesCard(s) {
       card.appendChild(row);
     });
   });
+
+  // Inline add + edit buttons
+  card.appendChild(el('div', { class: 'row', style: { gap: '6px', marginTop: '12px', flexWrap: 'wrap' } }, [
+    el('button', { class: 'btn', onClick: () => openAddNonNeg() }, [
+      el('i', { class: 'ph-fill ph-plus' }), ' add'
+    ]),
+    el('button', { class: 'btn btn--ghost', onClick: () => openManageNonNeg() }, [
+      el('i', { class: 'ph ph-pencil-simple' }), ' edit / manage'
+    ]),
+  ]));
+
   return card;
+}
+
+// Quick add sheet · pick category (or new) · label + emoji
+function openAddNonNeg() {
+  const s = getState();
+  const fLabel = el('input', { class: 'input', placeholder: 'e.g. drink water', autocapitalize: 'off' });
+  const fEmoji = el('input', { class: 'input', placeholder: '✿', maxlength: 4, style: { width: '64px' } });
+
+  const catSelect = el('select', { class: 'select' }, [
+    ...s.nonNegotiables.categories.map((c) => el('option', { value: c.id }, `${c.emoji} ${c.label}`)),
+    el('option', { value: '__new__' }, '+ new category…'),
+  ]);
+  const fNewCatLabel = el('input', { class: 'input', placeholder: 'category name', style: { display: 'none' } });
+  const fNewCatEmoji = el('input', { class: 'input', placeholder: 'emoji', maxlength: 4, style: { width: '64px', display: 'none' } });
+  catSelect.addEventListener('change', () => {
+    const isNew = catSelect.value === '__new__';
+    fNewCatLabel.style.display = isNew ? '' : 'none';
+    fNewCatEmoji.style.display = isNew ? '' : 'none';
+  });
+
+  openSheet(el('div', { class: 'stack' }, [
+    el('p', { class: 'muted', style: { margin: 0 } }, 'add a non-negotiable for every day.'),
+    el('div', { class: 'row', style: { gap: '6px' } }, [fEmoji, fLabel]),
+    el('label', { class: 'field' }, [
+      el('span', { class: 'field__label' }, 'category'),
+      catSelect,
+    ]),
+    el('div', { class: 'row', style: { gap: '6px' } }, [fNewCatEmoji, fNewCatLabel]),
+    el('button', { class: 'btn btn--block', onClick: () => {
+      const label = fLabel.value.trim();
+      if (!label) { toast('needs a label'); return; }
+      const emoji = fEmoji.value.trim() || '✿';
+      let catId = catSelect.value;
+      update((d) => {
+        if (catId === '__new__') {
+          const newLabel = fNewCatLabel.value.trim() || 'new';
+          const newEmoji = fNewCatEmoji.value.trim() || '✿';
+          catId = uid('nc');
+          d.nonNegotiables.categories.push({ id: catId, label: newLabel, emoji: newEmoji, tasks: [], addedBy: currentUser() });
+        }
+        const cat = d.nonNegotiables.categories.find((c) => c.id === catId);
+        if (!cat) return;
+        cat.tasks.push({ id: uid('nn'), label, emoji, addedBy: currentUser() });
+      });
+      closeSheet();
+      toast('added ✿');
+    } }, 'add'),
+  ]), { title: 'new non-negotiable' });
+}
+
+// Full manage sheet · edit/delete/reorder categories and tasks
+function openManageNonNeg() {
+  const host = el('div', { class: 'stack' });
+  function paintManager() {
+    host.innerHTML = '';
+    const state = getState();
+    state.nonNegotiables.categories.forEach((cat, ci) => {
+      const cCard = el('div', { class: 'card', style: { padding: '10px' } });
+      const eEmoji = el('input', { class: 'input', value: cat.emoji, maxlength: 4, style: { width: '54px' } });
+      const eLabel = el('input', { class: 'input', value: cat.label, style: { flex: '1' } });
+      const eDel = el('button', { class: 'btn btn--soft', onClick: () => {
+        if (!confirm(`delete the whole "${cat.label}" group?`)) return;
+        update((d) => { d.nonNegotiables.categories.splice(ci, 1); });
+        paintManager();
+      } }, [el('i', { class: 'ph ph-trash' })]);
+      eEmoji.addEventListener('change', () => update((d) => { d.nonNegotiables.categories[ci].emoji = eEmoji.value; }));
+      eLabel.addEventListener('change', () => update((d) => { d.nonNegotiables.categories[ci].label = eLabel.value; }));
+      cCard.appendChild(el('div', { class: 'row', style: { gap: '6px' } }, [eEmoji, eLabel, eDel]));
+
+      cat.tasks.forEach((task, ti) => {
+        const tEmoji = el('input', { class: 'input', value: task.emoji, maxlength: 4, style: { width: '54px' } });
+        const tLabel = el('input', { class: 'input', value: task.label, style: { flex: '1' } });
+        const tDel = el('button', { class: 'btn btn--soft', onClick: () => {
+          update((d) => d.nonNegotiables.categories[ci].tasks.splice(ti, 1));
+          paintManager();
+        } }, [el('i', { class: 'ph ph-x' })]);
+        tEmoji.addEventListener('change', () => update((d) => { d.nonNegotiables.categories[ci].tasks[ti].emoji = tEmoji.value; }));
+        tLabel.addEventListener('change', () => update((d) => { d.nonNegotiables.categories[ci].tasks[ti].label = tLabel.value; }));
+        cCard.appendChild(el('div', { class: 'row', style: { gap: '6px', marginTop: '6px' } }, [tEmoji, tLabel, tDel]));
+      });
+      cCard.appendChild(el('button', { class: 'btn btn--ghost', style: { marginTop: '6px' }, onClick: () => {
+        update((d) => d.nonNegotiables.categories[ci].tasks.push({ id: uid('nn'), label: 'new', emoji: '✿', addedBy: currentUser() }));
+        paintManager();
+      } }, '+ task'));
+      host.appendChild(cCard);
+    });
+    host.appendChild(el('button', { class: 'btn btn--block', onClick: () => {
+      update((d) => d.nonNegotiables.categories.push({ id: uid('nc'), label: 'new category', emoji: '✿', tasks: [], addedBy: currentUser() }));
+      paintManager();
+    } }, '+ category'));
+  }
+  paintManager();
+  openSheet(host, { title: 'manage non-negotiables' });
 }
 
 // 4. Top 3 tasks (with "one main thing" flagged) · energy-aware order
