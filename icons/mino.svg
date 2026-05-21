@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200" aria-label="Mino">
+  <defs>
+    <radialGradient id="mShadow" cx="0.5" cy="0.95" r="0.6">
+      <stop offset="0" stop-color="#F8B7CB" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#F8B7CB" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="mHorn" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFF2C2"/>
+      <stop offset="1" stop-color="#F7C8A1"/>
+    </linearGradient>
+    <radialGradient id="mCheek" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#FF8FB1" stop-opacity="0.6"/>
+      <stop offset="1" stop-color="#FF8FB1" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <ellipse cx="100" cy="185" rx="55" ry="8" fill="url(#mShadow)"/>
+  <!-- mane wisps -->
+  <g class="mino-mane">
+    <path d="M40 110 q15 -32 35 -38 q-4 16 0 30 q5 -18 18 -26 q-2 16 2 26 q6 -16 22 -22 q-2 14 2 24 q8 -12 20 -18 q-4 24 -12 44 z" fill="#FFB4D1"/>
+  </g>
+  <!-- head -->
+  <ellipse cx="105" cy="112" rx="46" ry="42" fill="#FFFFFF" stroke="#F8C7D6" stroke-width="1.5"/>
+  <!-- snout -->
+  <ellipse cx="105" cy="132" rx="30" ry="22" fill="#FFF5F8"/>
+  <!-- ears -->
+  <path d="M70 80 q-4 -20 8 -28 q8 12 7 28 z" fill="#FFFFFF" stroke="#F8C7D6" stroke-width="1.2"/>
+  <path d="M140 80 q4 -20 -8 -28 q-8 12 -7 28 z" fill="#FFFFFF" stroke="#F8C7D6" stroke-width="1.2"/>
+  <path d="M74 80 q-2 -12 6 -20" fill="#FFC8DC"/>
+  <path d="M136 80 q2 -12 -6 -20" fill="#FFC8DC"/>
+  <!-- horn -->
+  <path d="M105 38 L98 86 L112 86 Z" fill="url(#mHorn)" stroke="#E9A06A" stroke-width="1.5" stroke-linejoin="round"/>
+  <path d="M105 52 L103 86 M105 64 L107 86" stroke="#E9A06A" stroke-width="1" fill="none" opacity="0.5"/>
+  <!-- cheeks -->
+  <circle cx="74" cy="128" r="10" fill="url(#mCheek)"/>
+  <circle cx="136" cy="128" r="10" fill="url(#mCheek)"/>
+  <!-- eyes (default: content closed arcs) -->
+  <g class="mino-eyes">
+    <path d="M82 114 q6 6 12 0" stroke="#3B2A33" stroke-width="2.6" stroke-linecap="round" fill="none"/>
+    <path d="M116 114 q6 6 12 0" stroke="#3B2A33" stroke-width="2.6" stroke-linecap="round" fill="none"/>
+  </g>
+  <!-- mouth -->
+  <path d="M98 142 q6 5 12 0" stroke="#3B2A33" stroke-width="2.2" stroke-linecap="round" fill="none"/>
+  <!-- sparkle -->
+  <g fill="#FFD9E6">
+    <path d="M158 56 l3 7 l7 3 l-7 3 l-3 7 l-3 -7 l-7 -3 l7 -3 z"/>
+  </g>
+</svg>

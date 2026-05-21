@@ -1,0 +1,17 @@
+{
+  "name": "sriya-os",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Sriya's webOS — a personal life-OS PWA",
+  "scripts": {
+    "dev": "vercel dev",
+    "deploy": "vercel deploy",
+    "deploy:prod": "vercel deploy --prod"
+  },
+  "dependencies": {
+    "postgres": "^3.4.4"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

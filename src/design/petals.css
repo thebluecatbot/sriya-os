@@ -1,0 +1,65 @@
+/* Slow, low-opacity petal-fall background. Pure CSS, paused when tab hidden. */
+
+.petals {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 0;
+  opacity: 0.65;
+}
+[data-petals="off"] .petals { display: none; }
+
+.petals::before,
+.petals::after,
+.petals > span { content: ''; position: absolute; display: block; }
+
+/* Generate 12 petals via repeating gradients on three layered absolutes.
+   Each layer drifts at a different speed and uses different petal shapes. */
+
+.petals::before,
+.petals::after {
+  top: -20%;
+  left: -10%;
+  width: 120%;
+  height: 140%;
+  background-repeat: repeat;
+  background-size: 280px 320px;
+  filter: blur(0.3px);
+  animation: petal-fall 32s linear infinite;
+  will-change: transform;
+}
+
+.petals::before {
+  background-image:
+    radial-gradient(8px 12px at 40px 60px, #FFC9DC 60%, transparent 62%),
+    radial-gradient(10px 14px at 200px 150px, #FFD9E6 55%, transparent 60%),
+    radial-gradient(6px 10px at 120px 240px, #F8BFD3 60%, transparent 64%);
+  animation-duration: 38s;
+}
+
+.petals::after {
+  background-image:
+    radial-gradient(7px 11px at 80px 30px, #FFE0CF 55%, transparent 60%),
+    radial-gradient(9px 13px at 240px 180px, #FFD4E0 55%, transparent 60%),
+    radial-gradient(5px 9px at 160px 280px, #FFC3D6 60%, transparent 64%);
+  animation-duration: 52s;
+  animation-delay: -16s;
+  background-size: 320px 360px;
+  opacity: 0.7;
+}
+
+@keyframes petal-fall {
+  0%   { transform: translate3d(0, -8%, 0) rotate(0); }
+  100% { transform: translate3d(-3%, 8%, 0) rotate(8deg); }
+}
+
+/* Pause when document hidden (Page Visibility) — set by app.js */
+[data-tab-hidden="true"] .petals::before,
+[data-tab-hidden="true"] .petals::after { animation-play-state: paused; }
+
+/* Reduced motion: fade petals out completely (they imply motion). */
+@media (prefers-reduced-motion: reduce) {
+  .petals { display: none; }
+}
+[data-motion="reduce"] .petals { display: none; }

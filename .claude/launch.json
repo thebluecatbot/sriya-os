@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "sriya",
+      "runtimeExecutable": "C:\\Users\\Sriya\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
+      "runtimeArgs": ["-m", "http.server", "5174", "--bind", "127.0.0.1"],
+      "port": 5174
+    }
+  ]
+}

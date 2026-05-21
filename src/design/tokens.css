@@ -1,0 +1,196 @@
+/* sriya — design tokens
+   The whole app is feminine through softness and colour, never clutter.
+   Four user-selectable variants: Blush (default), Lavender, Peachy, Sakura.
+   Light + dark for each. Dark uses plum/mauve, never harsh black.
+*/
+
+:root {
+  --font-display: "Fraunces", "Cormorant Garamond", Georgia, serif;
+  --font-body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --fs-xs: 0.75rem;
+  --fs-sm: 0.875rem;
+  --fs-md: 1rem;
+  --fs-lg: 1.125rem;
+  --fs-xl: 1.375rem;
+  --fs-2xl: 1.75rem;
+  --fs-3xl: 2.25rem;
+  --fs-4xl: 3rem;
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+
+  --radius-sm: 10px;
+  --radius-md: 16px;
+  --radius-lg: 22px;
+  --radius-xl: 28px;
+  --radius-pill: 999px;
+
+  --shadow-1: 0 1px 2px rgba(180, 110, 140, 0.08), 0 2px 6px rgba(180, 110, 140, 0.06);
+  --shadow-2: 0 4px 14px rgba(180, 110, 140, 0.12), 0 10px 28px rgba(180, 110, 140, 0.10);
+  --shadow-3: 0 14px 36px rgba(160, 80, 120, 0.18);
+
+  --ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --dur-fast: 120ms;
+  --dur: 200ms;
+  --dur-slow: 360ms;
+
+  --safe-top: env(safe-area-inset-top);
+  --safe-bottom: env(safe-area-inset-bottom);
+
+  /* Accent rainbow — palette swap below changes these. */
+  --accent-pink: #F08AAB;
+  --accent-rose: #E66B95;
+  --accent-lilac: #C9A6E6;
+  --accent-peach: #F7B69C;
+  --accent-mint:  #A8DCC8;
+  --accent-butter:#F4D58D;
+}
+
+/* ─────────── BLUSH (default) ─────────── */
+[data-theme="blush"] {
+  --bg:           #FFF5F8;
+  --bg-soft:      #FFE9F0;
+  --surface:     #FFFFFF;
+  --surface-2:   #FFEEF4;
+  --surface-3:   #FFE0EC;
+  --ink:          #3B2A33;
+  --ink-soft:     #6F5562;
+  --ink-mute:     #9D8090;
+  --line:         #F6D7E3;
+  --primary:      #E66B95;
+  --primary-deep: #C84F7C;
+  --primary-soft: #FFD2E0;
+  --on-primary:   #FFFFFF;
+  --good:         #6BB89A;
+  --warn:         #E8A861;
+  --info:         #B091D6;
+  --gradient-card: linear-gradient(160deg, #FFF7FA 0%, #FFEAF1 100%);
+  --gradient-hero: linear-gradient(135deg, #FFE0EC 0%, #FFD2E0 50%, #FFE6CF 100%);
+}
+
+/* ─────────── LAVENDER ─────────── */
+[data-theme="lavender"] {
+  --bg:           #F8F3FE;
+  --bg-soft:      #EFE5FB;
+  --surface:     #FFFFFF;
+  --surface-2:   #F4ECFD;
+  --surface-3:   #E9DCFB;
+  --ink:          #322B40;
+  --ink-soft:     #62557A;
+  --ink-mute:     #9387AC;
+  --line:         #E3D3F5;
+  --primary:      #A684E4;
+  --primary-deep: #7C5BC8;
+  --primary-soft: #E0CDF8;
+  --on-primary:   #FFFFFF;
+  --good:         #7EC0A8;
+  --warn:         #DDA372;
+  --info:         #94B3E0;
+  --gradient-card: linear-gradient(160deg, #F9F4FE 0%, #ECE0FB 100%);
+  --gradient-hero: linear-gradient(135deg, #E9DCFB 0%, #F3DEF3 50%, #FFE2EC 100%);
+}
+
+/* ─────────── PEACHY ─────────── */
+[data-theme="peachy"] {
+  --bg:           #FFF4EE;
+  --bg-soft:      #FFE7D6;
+  --surface:     #FFFFFF;
+  --surface-2:   #FFEFE0;
+  --surface-3:   #FFDFC6;
+  --ink:          #3F2C25;
+  --ink-soft:     #745446;
+  --ink-mute:     #A8867A;
+  --line:         #FAD7C0;
+  --primary:      #ED8E6A;
+  --primary-deep: #C76A48;
+  --primary-soft: #FFCDB2;
+  --on-primary:   #FFFFFF;
+  --good:         #87C5A2;
+  --warn:         #D69A5C;
+  --info:         #B59CD9;
+  --gradient-card: linear-gradient(160deg, #FFF8F2 0%, #FFE3CC 100%);
+  --gradient-hero: linear-gradient(135deg, #FFE2CB 0%, #FFD0DE 50%, #FAE3FF 100%);
+}
+
+/* ─────────── SAKURA ─────────── */
+[data-theme="sakura"] {
+  --bg:           #FFF7FB;
+  --bg-soft:      #FFE3F2;
+  --surface:     #FFFFFF;
+  --surface-2:   #FFECF6;
+  --surface-3:   #FFD7EC;
+  --ink:          #3A2730;
+  --ink-soft:     #745366;
+  --ink-mute:     #A6859A;
+  --line:         #FCD0E2;
+  --primary:      #F47BA7;
+  --primary-deep: #D45684;
+  --primary-soft: #FFC9DE;
+  --on-primary:   #FFFFFF;
+  --good:         #79C2B0;
+  --warn:         #E5B375;
+  --info:         #BAA0E2;
+  --gradient-card: linear-gradient(160deg, #FFF7FB 0%, #FFD8EC 100%);
+  --gradient-hero: linear-gradient(135deg, #FFD8EC 0%, #FFE0CF 50%, #E5D5FA 100%);
+}
+
+/* ─────────── DARK MODE (plum / mauve, never harsh black) ─────────── */
+@media (prefers-color-scheme: dark) {
+  [data-theme="blush"]:not([data-mode="light"]),
+  [data-theme="lavender"]:not([data-mode="light"]),
+  [data-theme="peachy"]:not([data-mode="light"]),
+  [data-theme="sakura"]:not([data-mode="light"]) {
+    --bg:        #2A1F28;
+    --bg-soft:   #38293A;
+    --surface:   #3A2C38;
+    --surface-2: #432F40;
+    --surface-3: #4F3848;
+    --ink:        #FBEEF3;
+    --ink-soft:   #D7BFCB;
+    --ink-mute:   #A48E9C;
+    --line:       #563B4E;
+    --gradient-card: linear-gradient(160deg, #3A2C38 0%, #4F3848 100%);
+    --gradient-hero: linear-gradient(135deg, #4A2F44 0%, #5B354F 50%, #6B3C56 100%);
+  }
+}
+
+[data-mode="dark"] {
+  --bg:        #2A1F28;
+  --bg-soft:   #38293A;
+  --surface:   #3A2C38;
+  --surface-2: #432F40;
+  --surface-3: #4F3848;
+  --ink:        #FBEEF3;
+  --ink-soft:   #D7BFCB;
+  --ink-mute:   #A48E9C;
+  --line:       #563B4E;
+  --gradient-card: linear-gradient(160deg, #3A2C38 0%, #4F3848 100%);
+  --gradient-hero: linear-gradient(135deg, #4A2F44 0%, #5B354F 50%, #6B3C56 100%);
+}
+
+/* ─────────── A11y prefs (sit on top of theme) ─────────── */
+[data-font-size="lg"]  { --fs-md: 1.0625rem; --fs-lg: 1.1875rem; --fs-xl: 1.5rem;  --fs-2xl: 2rem; }
+[data-font-size="xl"]  { --fs-md: 1.125rem;  --fs-lg: 1.25rem;   --fs-xl: 1.625rem; --fs-2xl: 2.25rem; }
+
+[data-contrast="high"] {
+  --ink: #1F1218;
+  --ink-soft: #3D2630;
+  --line: #C58FAA;
+  --primary-deep: #A8366A;
+}
+
+[data-dyslexic="on"] {
+  --font-body: "Atkinson Hyperlegible", "Inter", system-ui, sans-serif;
+}
+
+/* ─────────── reduced motion ─────────── */
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+}
+[data-motion="reduce"] * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }

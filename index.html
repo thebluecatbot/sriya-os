@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=yes" />
+  <meta name="theme-color" content="#F4A6B7" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="sriya" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="format-detection" content="telephone=no" />
+  <meta name="color-scheme" content="light dark" />
+  <meta name="description" content="Sriya's webOS — routines, tasks, time, study, journal, Mino." />
+
+  <title>sriya</title>
+
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="icon" type="image/svg+xml" href="/icons/icon-192.svg" />
+  <link rel="apple-touch-icon" href="/icons/icon-192.svg" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500;1,9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <!-- Phosphor icons (used everywhere, tinted pink via tokens) -->
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css" />
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/duotone/style.css" />
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css" />
+
+  <link rel="stylesheet" href="/src/design/tokens.css" />
+  <link rel="stylesheet" href="/src/design/components.css" />
+  <link rel="stylesheet" href="/src/design/petals.css" />
+</head>
+<body data-theme="blush" data-petals="on">
+  <div class="petals" aria-hidden="true"></div>
+
+  <header id="activity-bar" class="activity-bar" hidden>
+    <span class="activity-bar__dot" aria-hidden="true"></span>
+    <i class="ph-fill ph-timer activity-bar__icon" aria-hidden="true"></i>
+    <span class="activity-bar__label">No activity</span>
+    <span class="activity-bar__time" aria-live="off">0:00</span>
+    <button class="activity-bar__action" type="button" data-action="stop-timer" aria-label="Stop timer">
+      <i class="ph-fill ph-stop-circle" aria-hidden="true"></i> stop
+    </button>
+  </header>
+
+  <aside id="sidebar" class="sidebar" aria-label="All modules"></aside>
+
+  <main id="view" class="view" tabindex="-1" aria-live="polite"></main>
+
+  <button id="capture-fab" class="fab" type="button" aria-label="Quick capture">
+    <i class="ph-fill ph-plus" aria-hidden="true"></i>
+  </button>
+
+  <div id="mino-root" class="mino-root" aria-live="polite"></div>
+
+  <nav id="nav" class="nav" aria-label="Primary">
+    <a class="nav__tab" href="#/today" data-tab="today">
+      <i class="ph-duotone ph-flower nav__icon" aria-hidden="true"></i>
+      <span class="nav__label">Today</span>
+    </a>
+    <a class="nav__tab" href="#/tasks" data-tab="tasks">
+      <i class="ph-duotone ph-checks nav__icon" aria-hidden="true"></i>
+      <span class="nav__label">Tasks</span>
+    </a>
+    <a class="nav__tab" href="#/timer" data-tab="timer">
+      <i class="ph-duotone ph-timer nav__icon" aria-hidden="true"></i>
+      <span class="nav__label">Timer</span>
+    </a>
+    <a class="nav__tab" href="#/mino" data-tab="mino">
+      <i class="ph-duotone ph-heart nav__icon" aria-hidden="true"></i>
+      <span class="nav__label">Mino</span>
+    </a>
+    <a class="nav__tab" href="#/me" data-tab="me">
+      <i class="ph-duotone ph-sparkle nav__icon" aria-hidden="true"></i>
+      <span class="nav__label">Me</span>
+    </a>
+  </nav>
+
+  <div id="sheet-root" class="sheet-root" aria-hidden="true"></div>
+  <div id="toast-root" class="toast-root" aria-live="polite"></div>
+
+  <noscript>
+    <p style="padding:2rem;font-family:Inter,system-ui,sans-serif">
+      sriya needs JavaScript turned on. ♡
+    </p>
+  </noscript>
+
+  <script type="module" src="/src/app.js"></script>
+</body>
+</html>
