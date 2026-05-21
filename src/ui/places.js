@@ -79,11 +79,18 @@ function rePaint() {
   update((d) => { d.places._uiTick = (d.places._uiTick || 0) + 1; });
 }
 
-// ─── Ensure seed ───
+// ─── Ensure seed ─── (also tops-up new seed venues for existing users)
 function ensureSeed(s) {
-  if ((s.places.items || []).length === 0) {
+  const existingIds = new Set((s.places.items || []).map((v) => v.id));
+  const missing = SEED_VENUES.filter((v) => !existingIds.has(v.id));
+  if ((s.places.items || []).length === 0 || missing.length > 0) {
     update((d) => {
-      d.places.items = SEED_VENUES.map((v) => ({ ...v, status: 'want' }));
+      const have = new Set((d.places.items || []).map((v) => v.id));
+      for (const v of SEED_VENUES) {
+        if (!have.has(v.id)) {
+          d.places.items.push({ ...v, status: 'want' });
+        }
+      }
     });
   }
 }

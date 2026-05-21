@@ -144,7 +144,13 @@ function openMoreDrawer() {
     wrap.appendChild(el('div', { class: 'modules-grid' },
       group.modules.map((m) => el('a', {
         class: 'modules-grid__tile', href: `#${m.path}`,
-        onClick: () => closeSheet(),
+        onClick: (e) => {
+          // Belt + braces: close the sheet first then force-navigate so the
+          // hashchange fires even if the link default is swallowed by a parent.
+          e.preventDefault();
+          closeSheet();
+          setTimeout(() => { location.hash = m.path; }, 60);
+        },
       }, [
         el('i', { class: `ph-duotone ${m.icon}`, 'aria-hidden': 'true' }),
         el('span', null, m.label),

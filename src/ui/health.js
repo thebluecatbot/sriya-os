@@ -81,14 +81,22 @@ function medsSection(s) {
               e.preventDefault();
               const rect = row.querySelector('.check__box').getBoundingClientRect();
               update((d) => {
-                d.health.medLog.push({
-                  id: uid('ml'), medId: m.id, date: day,
-                  time: new Date().toISOString(), taken: !isDone, skipReason: null,
-                });
-                if (!isDone && m.stockCount != null && m.stockCount > 0) m._; // (we decrement stock when taken below in stock update)
+                // Clear today's prior entries for this med, then add fresh one if taking.
+                d.health.medLog = d.health.medLog.filter((l) => !(l.date === day && l.medId === m.id));
+                d.doneJar.byDate[day] = d.doneJar.byDate[day] || [];
                 if (!isDone) {
+                  d.health.medLog.push({
+                    id: uid('ml'), medId: m.id, date: day,
+                    time: new Date().toISOString(), taken: true, skipReason: null,
+                  });
                   const med = d.health.meds.find((x) => x.id === m.id);
                   if (med && Number.isFinite(med.stockCount) && med.stockCount > 0) med.stockCount -= 1;
+                  d.doneJar.byDate[day].push({ kind: 'med', id: m.id, label: m.name, at: new Date().toISOString() });
+                } else {
+                  // Untick — refund stock if we'd decremented earlier
+                  const med = d.health.meds.find((x) => x.id === m.id);
+                  if (med && Number.isFinite(med.stockCount)) med.stockCount += 1;
+                  d.doneJar.byDate[day] = d.doneJar.byDate[day].filter((j) => !(j.kind === 'med' && j.id === m.id));
                 }
               });
               if (!isDone) { bloomAt(rect.left + rect.width / 2, rect.top + rect.height / 2); haptic(8); }
@@ -262,9 +270,17 @@ function routineCard(s, kind) {
           ]);
           row.addEventListener('click', (e) => {
             e.preventDefault();
-            update((d) => (d.health.skincare.log ||= []).push({
-              id: uid('sk'), date: day, kind, step, time: new Date().toISOString(),
-            }));
+            update((d) => {
+              d.health.skincare.log ||= [];
+              // toggle: if any entry today for this kind+step exists, remove it;
+              // otherwise add a fresh one.
+              const has = d.health.skincare.log.some((l) => l.date === day && l.kind === kind && l.step === step);
+              if (has) {
+                d.health.skincare.log = d.health.skincare.log.filter((l) => !(l.date === day && l.kind === kind && l.step === step));
+              } else {
+                d.health.skincare.log.push({ id: uid('sk'), date: day, kind, step, time: new Date().toISOString() });
+              }
+            });
           });
           return el('li', { style: { padding: '2px 0' } }, [row]);
         })),

@@ -126,9 +126,12 @@ function nonNegotiablesCard(s) {
           const day = todayKey();
           d.nonNegotiables.tickLog[day] = d.nonNegotiables.tickLog[day] || {};
           d.nonNegotiables.tickLog[day][task.id] = willBeDone;
+          d.doneJar.byDate[day] = d.doneJar.byDate[day] || [];
           if (willBeDone) {
-            d.doneJar.byDate[day] = d.doneJar.byDate[day] || [];
             d.doneJar.byDate[day].push({ kind: 'nonneg', id: task.id, label: task.label, at: new Date().toISOString() });
+          } else {
+            // Remove every matching done-jar entry so untick cleans up
+            d.doneJar.byDate[day] = d.doneJar.byDate[day].filter((j) => !(j.kind === 'nonneg' && j.id === task.id));
           }
         });
         if (willBeDone) {
@@ -197,10 +200,21 @@ function medsCard(s) {
       row.addEventListener('click', (e) => {
         e.preventDefault();
         update((d) => {
-          d.health.medLog.push({
-            id: `ml-${Date.now()}`, medId: m.id, date: day,
-            time: new Date().toISOString(), taken: !isDone,
-          });
+          // Clean any prior entries today for this med, then add a single
+          // fresh entry so toggling on/off is always consistent.
+          d.health.medLog = d.health.medLog.filter((l) => !(l.date === day && l.medId === m.id));
+          if (!isDone) {
+            d.health.medLog.push({
+              id: `ml-${Date.now()}`, medId: m.id, date: day,
+              time: new Date().toISOString(), taken: true,
+            });
+            // also drop in done jar
+            d.doneJar.byDate[day] = d.doneJar.byDate[day] || [];
+            d.doneJar.byDate[day].push({ kind: 'med', id: m.id, label: m.name, at: new Date().toISOString() });
+          } else {
+            // remove med entry from done jar too
+            d.doneJar.byDate[day] = (d.doneJar.byDate[day] || []).filter((j) => !(j.kind === 'med' && j.id === m.id));
+          }
         });
       });
       return row;

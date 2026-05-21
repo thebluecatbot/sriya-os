@@ -147,7 +147,14 @@ function quickToggleRow(taskId, label) {
     update((d) => {
       const day = todayKey();
       d.nonNegotiables.tickLog[day] = d.nonNegotiables.tickLog[day] || {};
-      d.nonNegotiables.tickLog[day][taskId] = !d.nonNegotiables.tickLog[day][taskId];
+      const wasDone = !!d.nonNegotiables.tickLog[day][taskId];
+      d.nonNegotiables.tickLog[day][taskId] = !wasDone;
+      d.doneJar.byDate[day] = d.doneJar.byDate[day] || [];
+      if (!wasDone) {
+        d.doneJar.byDate[day].push({ kind: 'nonneg', id: taskId, label, at: new Date().toISOString() });
+      } else {
+        d.doneJar.byDate[day] = d.doneJar.byDate[day].filter((j) => !(j.kind === 'nonneg' && j.id === taskId));
+      }
     });
     const nowDone = !!(getState().nonNegotiables.tickLog[t] || {})[taskId];
     row.dataset.done = String(nowDone);
