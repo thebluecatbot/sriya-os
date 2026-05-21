@@ -199,9 +199,12 @@ function schedulePersist() {
 
 function scheduleSync() {
   if (IS_GUEST) return; // guests don't sync
+  if (!_initialMergeDone) {
+    // Queue: we'll flush once init's remote pull lands.
+    if (_syncQueue.length === 0) _syncQueue.push(1);
+    return;
+  }
   if (_pendingSync) clearTimeout(_pendingSync);
-  // Tightened to 800ms — fast enough that the next device sees the change
-  // within ~1s of the user lifting their finger.
   _pendingSync = setTimeout(syncToNeon, 800);
 }
 
@@ -256,35 +259,40 @@ async function loadFromNeon() {
 // ──────────────────────────────────────────────────────────────
 // Init: localStorage first (instant), then Neon merge in background.
 // ──────────────────────────────────────────────────────────────
+// Gate: until init has settled (local read + remote pull), nothing is allowed
+// to POST to the server. Otherwise an auto-stamped empty `defaults()` would
+// race ahead of the remote load and OVERWRITE real data on Supabase.
+let _initialMergeDone = false;
+const _syncQueue = [];
+
 export async function initState() {
   const local = loadLocal();
-  _state = local ? deepMerge(defaults(), local) : defaults();
+  let remote = null;
+  try { remote = await loadFromNeon(); }
+  catch (e) { console.warn('[sync] initial load failed', e); }
+
+  const lTs = Date.parse(local?.updatedAt || local?.lastTouched || 0) || 0;
+  const rTs = Date.parse(remote?.updatedAt || remote?.lastTouched || 0) || 0;
+  let pickedFrom = 'defaults';
+  if (remote && local) {
+    if (rTs >= lTs) { _state = deepMerge(defaults(), remote); pickedFrom = 'remote (newer)'; }
+    else            { _state = deepMerge(defaults(), local);  pickedFrom = 'local (newer)'; }
+  } else if (remote) { _state = deepMerge(defaults(), remote); pickedFrom = 'remote (only)'; }
+  else if (local)    { _state = deepMerge(defaults(), local);  pickedFrom = 'local (only)'; }
+  else               { _state = defaults();                    pickedFrom = 'defaults'; }
+
+  console.log(`[sync] init · picked ${pickedFrom} · lTs=${lTs} rTs=${rTs} tasks=${_state?.tasks?.negotiable?.length || 0}`);
+
   notify();
+  // Open the sync gate. Any updates queued during init now flush.
+  _initialMergeDone = true;
+  if (_syncQueue.length > 0) { _syncQueue.length = 0; scheduleSync(); }
 
-  // Background pull: if Supabase has a newer copy, take it.
-  loadFromNeon().then((remote) => {
-    if (!remote) {
-      console.log('[sync] no remote state yet');
-      return;
-    }
-    const localTs = Date.parse(local?.updatedAt || local?.lastTouched || 0) || 0;
-    const remoteTs = Date.parse(remote.updatedAt || remote.lastTouched || 0) || 0;
-    console.log('[sync] localTs=' + new Date(localTs).toISOString() + ' remoteTs=' + new Date(remoteTs).toISOString());
-    // Take remote if it is strictly newer, OR if we have no local stamp at all.
-    if (remoteTs > localTs || (!localTs && remoteTs > 0)) {
-      _state = deepMerge(defaults(), remote);
-      saveLocal(_state);
-      notify();
-      console.log('[sync] pulled remote · local replaced');
-    } else if (localTs > remoteTs) {
-      // Local is newer · push it up.
-      console.log('[sync] local newer · pushing to remote');
-      scheduleSync();
-    } else {
-      console.log('[sync] in sync');
-    }
-  }).catch((e) => console.warn('[sync] load failed', e));
-
+  // If local was strictly newer than remote, push it up to overwrite.
+  if (local && rTs > 0 && lTs > rTs) {
+    console.log('[sync] local newer · pushing up');
+    scheduleSync();
+  }
   return _state;
 }
 
