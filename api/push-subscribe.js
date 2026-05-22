@@ -3,8 +3,24 @@
 
 import postgres from 'postgres';
 
-const url = process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.SUPABASE_DB_URL;
-const sql = url ? postgres(url, { prepare: false, ssl: 'require', max: 1, idle_timeout: 20 }) : null;
+function makeClient() {
+  const opts = { prepare: false, ssl: 'require', max: 1, idle_timeout: 20 };
+  const pwd = process.env.SUPABASE_DB_PASSWORD;
+  if (pwd) {
+    return postgres({
+      host: process.env.SUPABASE_DB_HOST || 'aws-1-ap-south-1.pooler.supabase.com',
+      port: Number(process.env.SUPABASE_DB_PORT || 6543),
+      database: process.env.SUPABASE_DB_NAME || 'postgres',
+      username: process.env.SUPABASE_DB_USER || 'postgres.kcvhlmquqkoxrkhcablc',
+      password: pwd,
+      ...opts,
+    });
+  }
+  const url = process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.SUPABASE_DB_URL;
+  if (url) return postgres(url, opts);
+  return null;
+}
+const sql = (() => { try { return makeClient(); } catch (e) { console.error('makeClient failed', e?.message); return null; } })();
 
 let tableReady = false;
 async function ensureTable() {

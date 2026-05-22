@@ -4,9 +4,30 @@
 
 import postgres from 'postgres';
 
-const url = process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.SUPABASE_DB_URL;
-// `postgres` package supports Supabase's pooler URL out of the box.
-const sql = url ? postgres(url, { prepare: false, ssl: 'require', max: 1, idle_timeout: 20 }) : null;
+// Two ways to configure DB:
+//   A) DATABASE_URL — full connection string. Requires URL-encoded password if
+//      it contains @ : / ? # % & = + space.
+//   B) SUPABASE_DB_PASSWORD — just the raw password. SAFER. We build the URL
+//      from the known host/db/user. No URL-encoding needed.
+function makeClient() {
+  const opts = { prepare: false, ssl: 'require', max: 1, idle_timeout: 20 };
+  const pwd = process.env.SUPABASE_DB_PASSWORD;
+  if (pwd) {
+    return postgres({
+      host: process.env.SUPABASE_DB_HOST || 'aws-1-ap-south-1.pooler.supabase.com',
+      port: Number(process.env.SUPABASE_DB_PORT || 6543),
+      database: process.env.SUPABASE_DB_NAME || 'postgres',
+      username: process.env.SUPABASE_DB_USER || 'postgres.kcvhlmquqkoxrkhcablc',
+      password: pwd,
+      ...opts,
+    });
+  }
+  const url = process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.SUPABASE_DB_URL;
+  if (url) return postgres(url, opts);
+  return null;
+}
+
+const sql = (() => { try { return makeClient(); } catch (e) { console.error('makeClient failed', e?.message); return null; } })();
 
 let tableReady = false;
 async function ensureTable() {
