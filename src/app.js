@@ -29,6 +29,7 @@ import { mountUnlocks } from './mino/unlocks.js';
 import { placeholder } from './ui/placeholder.js';
 import { runDailyTick } from './utils/recurrence.js';
 import { mountNotifications } from './utils/notifications.js';
+import { mountSyncStatus } from './ui/sync-status.js';
 import { $ } from './utils/dom.js';
 
 (async function main() {
@@ -52,6 +53,7 @@ async function bootApp() {
 
   registerRoutes();
   mountShell();
+  mountSyncStatus();
   mountMino();
   mountNotifications();
   mountUnlocks();

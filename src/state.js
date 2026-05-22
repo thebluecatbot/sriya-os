@@ -287,11 +287,25 @@ let _isSyncing = false;
 // Snapshot of last-pushed body so we don't echo identical writes.
 let _lastPushedJSON = '';
 
+// ── Sync status broadcast · 'ok' | 'syncing' | 'offline' ── //
+const _syncStatusSubs = new Set();
+let _lastSyncStatus = 'syncing';
+export function subscribeSyncStatus(fn) {
+  _syncStatusSubs.add(fn);
+  try { fn(_lastSyncStatus); } catch {}
+  return () => _syncStatusSubs.delete(fn);
+}
+function emitSyncStatus(status) {
+  _lastSyncStatus = status;
+  for (const fn of _syncStatusSubs) { try { fn(status); } catch {} }
+}
+
 async function syncToNeon() {
   _pendingSync = null;
-  if (!navigator.onLine) return;
+  if (!navigator.onLine) { emitSyncStatus('offline'); return; }
   if (_isSyncing) return;
   _isSyncing = true;
+  emitSyncStatus('syncing');
   try {
     // Merge-before-write: pull remote, union with local, then push the union.
     // This is what prevents "user A overwrites user B" data loss.
@@ -320,10 +334,27 @@ async function syncToNeon() {
       headers: { 'content-type': 'application/json' },
       body: payloadBody,
     });
-    if (!res.ok) console.warn('[sync] POST failed', res.status);
-    else _lastPushedJSON = stateOnly;
+    let pushedOK = false;
+    if (!res.ok) {
+      console.warn('[sync] POST failed', res.status);
+    } else {
+      // Vercel function returns 200 + { offline: true } when DB is unreachable —
+      // treat that as a sync failure, not a success.
+      try {
+        const body = await res.clone().json();
+        if (body && body.offline) {
+          emitSyncStatus('offline');
+          console.warn('[sync] POST returned offline:true · DB unreachable');
+        } else {
+          pushedOK = true;
+        }
+      } catch { pushedOK = true; }
+    }
+    if (pushedOK) { _lastPushedJSON = stateOnly; emitSyncStatus('ok'); }
+    else if (!res.ok) { emitSyncStatus('offline'); }
   } catch (e) {
     console.warn('[sync] write error', e?.message || e);
+    emitSyncStatus('offline');
   } finally {
     _isSyncing = false;
   }
@@ -388,15 +419,16 @@ if (typeof window !== 'undefined') {
 
 async function loadFromNeon() {
   if (IS_GUEST) return null;
-  if (!navigator.onLine) return null;
+  if (!navigator.onLine) { emitSyncStatus('offline'); return null; }
   // Hard 6s timeout so login never freezes if the API cold-starts slowly.
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), 6000);
   try {
     const res = await fetch(`/api/state?ns=${encodeURIComponent(NS)}`, { cache: 'no-store', signal: ctrl.signal });
     clearTimeout(t);
-    if (!res.ok) return null;
+    if (!res.ok) { emitSyncStatus('offline'); return null; }
     const data = await res.json();
+    if (data && data.offline) { emitSyncStatus('offline'); return null; }
     if (data && data.state && typeof data.state === 'object') {
       if (data.updatedAt && !data.state.updatedAt) data.state.updatedAt = data.updatedAt;
       return data.state;
@@ -404,6 +436,7 @@ async function loadFromNeon() {
   } catch (e) {
     clearTimeout(t);
     console.warn('[sync] loadFromNeon failed:', e?.message || e);
+    emitSyncStatus('offline');
   }
   return null;
 }

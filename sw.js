@@ -1,7 +1,7 @@
 // Sriya's webOS — service worker
 // Offline-first for the shell; network-first for state APIs.
 
-const VERSION = 'sriya-v12-2026-05-22-bugfixes';
+const VERSION = 'sriya-v13-2026-05-22-syncdot';
 const SHELL_CACHE = `${VERSION}-shell`;
 const RUNTIME_CACHE = `${VERSION}-runtime`;
 
@@ -29,7 +29,8 @@ const SHELL_ASSETS = [
   '/src/mino/voice.js',
   '/src/utils/dom.js',
   '/src/utils/format.js',
-  '/src/utils/push.js'
+  '/src/utils/push.js',
+  '/src/ui/sync-status.js'
 ];
 
 self.addEventListener('install', (event) => {
