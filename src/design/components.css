@@ -663,6 +663,59 @@ html.dark [data-added-by="prakhar"]::before {
   color: #2A1F08 !important;
 }
 
+/* Same dark-amber treatment for AUTO mode when the OS is in dark mode.
+   tokens.css uses `@media (prefers-color-scheme: dark)` with
+   `[data-theme="X"]:not([data-mode="light"])` to apply dark colors —
+   we need to match that selector path or the prakhar card stays bright. */
+@media (prefers-color-scheme: dark) {
+  [data-theme="blush"]:not([data-mode="light"])    [data-added-by="prakhar"],
+  [data-theme="lavender"]:not([data-mode="light"]) [data-added-by="prakhar"],
+  [data-theme="peachy"]:not([data-mode="light"])   [data-added-by="prakhar"],
+  [data-theme="sakura"]:not([data-mode="light"])   [data-added-by="prakhar"] {
+    background: linear-gradient(160deg, #4A3A12 0%, #5C3F0E 100%) !important;
+    border-color: #B88E2D !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
+    color: #FFEAA7 !important;
+  }
+  [data-theme="blush"]:not([data-mode="light"])    [data-added-by="prakhar"] *:not(input):not(textarea):not(select):not(button):not(.chip--primary),
+  [data-theme="lavender"]:not([data-mode="light"]) [data-added-by="prakhar"] *:not(input):not(textarea):not(select):not(button):not(.chip--primary),
+  [data-theme="peachy"]:not([data-mode="light"])   [data-added-by="prakhar"] *:not(input):not(textarea):not(select):not(button):not(.chip--primary),
+  [data-theme="sakura"]:not([data-mode="light"])   [data-added-by="prakhar"] *:not(input):not(textarea):not(select):not(button):not(.chip--primary) {
+    color: #FFEAA7 !important;
+  }
+  [data-theme="blush"]:not([data-mode="light"])    [data-added-by="prakhar"] .muted,
+  [data-theme="lavender"]:not([data-mode="light"]) [data-added-by="prakhar"] .muted,
+  [data-theme="peachy"]:not([data-mode="light"])   [data-added-by="prakhar"] .muted,
+  [data-theme="sakura"]:not([data-mode="light"])   [data-added-by="prakhar"] .muted,
+  [data-theme="blush"]:not([data-mode="light"])    [data-added-by="prakhar"] .check__meta,
+  [data-theme="lavender"]:not([data-mode="light"]) [data-added-by="prakhar"] .check__meta,
+  [data-theme="peachy"]:not([data-mode="light"])   [data-added-by="prakhar"] .check__meta,
+  [data-theme="sakura"]:not([data-mode="light"])   [data-added-by="prakhar"] .check__meta {
+    color: #E8C97A !important;
+  }
+  [data-theme="blush"]:not([data-mode="light"])    [data-added-by="prakhar"] strong,
+  [data-theme="lavender"]:not([data-mode="light"]) [data-added-by="prakhar"] strong,
+  [data-theme="peachy"]:not([data-mode="light"])   [data-added-by="prakhar"] strong,
+  [data-theme="sakura"]:not([data-mode="light"])   [data-added-by="prakhar"] strong {
+    color: #FFF8D6 !important;
+  }
+  [data-theme="blush"]:not([data-mode="light"])    [data-added-by="prakhar"] .chip,
+  [data-theme="lavender"]:not([data-mode="light"]) [data-added-by="prakhar"] .chip,
+  [data-theme="peachy"]:not([data-mode="light"])   [data-added-by="prakhar"] .chip,
+  [data-theme="sakura"]:not([data-mode="light"])   [data-added-by="prakhar"] .chip {
+    background: rgba(245, 201, 69, 0.18) !important;
+    color: #FFEAA7 !important;
+    border-color: rgba(245, 201, 69, 0.4) !important;
+  }
+  [data-theme="blush"]:not([data-mode="light"])    [data-added-by="prakhar"]::before,
+  [data-theme="lavender"]:not([data-mode="light"]) [data-added-by="prakhar"]::before,
+  [data-theme="peachy"]:not([data-mode="light"])   [data-added-by="prakhar"]::before,
+  [data-theme="sakura"]:not([data-mode="light"])   [data-added-by="prakhar"]::before {
+    background: #B88E2D !important;
+    color: #2A1F08 !important;
+  }
+}
+
 /* Calendar weekly view · horizontally scrollable on narrow screens so
    columns don't get squeezed to unreadable. */
 .calendar-week-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
