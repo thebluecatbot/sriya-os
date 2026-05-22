@@ -142,7 +142,37 @@ function registerSW() {
     navigator.serviceWorker.getRegistrations().then((rs) => rs.forEach((r) => r.unregister()));
     return;
   }
-  navigator.serviceWorker.register('/sw.js').catch((e) => console.warn('SW register failed', e));
+
+  // Remember whether there was already a controlling SW BEFORE we register.
+  // The first install on a fresh device will fire controllerchange too, and we
+  // don't want to reload on first load — only on actual UPDATES from now on.
+  const hadController = !!navigator.serviceWorker.controller;
+
+  // Auto-reload the page when the SW updates and takes over. The sw.js install
+  // handler calls skipWaiting() and activate calls clients.claim() — once the
+  // new SW becomes the controller, this listener fires and we reload to pick
+  // up the new HTML/JS. Without this, mobile Chrome (Android in particular)
+  // keeps serving the old cached assets even though a new SW is installed,
+  // which is exactly what was happening to the phone.
+  let _reloading = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!hadController) return;          // skip first-install case
+    if (_reloading) return;               // avoid double-reload loops
+    _reloading = true;
+    window.location.reload();
+  });
+
+  navigator.serviceWorker.register('/sw.js')
+    .then((reg) => {
+      // Poll every 60s for a new SW. Cheap & quiet — Chrome dedupes.
+      setInterval(() => reg.update().catch(() => {}), 60_000);
+      // Also check on tab focus — a long-backgrounded mobile PWA picks up
+      // a new version the moment Sriya brings it forward.
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) reg.update().catch(() => {});
+      });
+    })
+    .catch((e) => console.warn('SW register failed', e));
 }
 
 function bindVisibility() {
