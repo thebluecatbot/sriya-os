@@ -48,6 +48,26 @@ export default async function handler(req, res) {
     return res.status(503).json({ error: 'VAPID keys not configured' });
   }
 
+  // Ensure the subscription table exists — first cron run on a fresh DB.
+  try {
+    await sql`
+      CREATE TABLE IF NOT EXISTS sriya_push_subs (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        ns text NOT NULL,
+        endpoint text NOT NULL UNIQUE,
+        p256dh text NOT NULL,
+        auth text NOT NULL,
+        user_agent text,
+        created_at timestamptz NOT NULL DEFAULT now(),
+        last_seen_at timestamptz NOT NULL DEFAULT now()
+      )
+    `;
+    await sql`CREATE INDEX IF NOT EXISTS sriya_push_subs_ns_idx ON sriya_push_subs(ns)`;
+  } catch (e) {
+    console.error('cron: ensureTable failed', e);
+    return res.status(500).json({ error: 'db init failed' });
+  }
+
   const istHour = istHourFor();
   const dayKey = todayKeyIST();
 
