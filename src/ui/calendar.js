@@ -338,16 +338,40 @@ function monthView(s) {
 
 // ─── UNSCHEDULED TASKS TRAY ──────────────────────────────────
 function unscheduledTray(s) {
-  const list = s.tasks.negotiable.filter((t) => t.status !== 'done' && !t.scheduledAt).slice(0, 8);
+  // Show EVERY undone task without a scheduledAt. Sort: priority today > soon >
+  // someday, then due-date asc, then newest createdAt. Was capped at 8 — that
+  // hid the rest of the list once you had >8 tasks pending.
+  const rank = { today: 0, soon: 1, someday: 2 };
+  const list = (s.tasks.negotiable || [])
+    .filter((t) => t.status !== 'done' && !t.scheduledAt)
+    .sort((a, b) =>
+      (rank[a.priority] ?? 1) - (rank[b.priority] ?? 1)
+      || (a.due || '9999').localeCompare(b.due || '9999')
+      || (b.createdAt || '').localeCompare(a.createdAt || '')
+    );
   if (list.length === 0) return el('div');
   return el('div', { class: 'card' }, [
-    el('div', { class: 'card__title' }, [el('i', { class: 'ph-duotone ph-tray' }), 'unscheduled', el('small', null, `${list.length}`)]),
+    el('div', { class: 'card__title' }, [
+      el('i', { class: 'ph-duotone ph-tray' }),
+      'unscheduled',
+      el('small', null, `${list.length} pending`)
+    ]),
     el('p', { class: 'muted', style: { margin: 0, fontSize: '0.75rem' } }, 'tap to schedule. defaults to today.'),
-    el('div', { class: 'stack' }, list.map((t) => el('div', { class: 'row row--between' }, [
-      el('div', null, [
-        el('div', null, t.title),
+    el('div', {
+      class: 'stack',
+      style: { maxHeight: '420px', overflowY: 'auto', paddingRight: '4px' },
+    }, list.map((t) => el('div', {
+      class: 'row row--between',
+      dataset: t.addedBy === 'prakhar' ? { addedBy: 'prakhar' } : {},
+      style: { padding: '6px 0' },
+    }, [
+      el('div', { style: { minWidth: 0, flex: 1 } }, [
+        el('div', { style: { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' } }, [
+          t.priority === 'today' ? el('span', { class: 'chip chip--primary', style: { fontSize: '0.6rem', marginRight: '6px' } }, 'today') : null,
+          t.title || '(untitled)',
+        ]),
         el('div', { class: 'muted', style: { fontSize: '0.7rem' } },
-          [t.due, t.estMins ? fmtMinutes(t.estMins) : null].filter(Boolean).join(' · ')),
+          [t.due ? `due ${t.due}` : null, t.estMins ? fmtMinutes(t.estMins) : null].filter(Boolean).join(' · ')),
       ]),
       el('button', { class: 'btn btn--soft', onClick: () => scheduleTask(t) }, 'schedule'),
     ]))),
