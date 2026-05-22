@@ -1,7 +1,7 @@
 // Sriya's webOS — service worker
 // Offline-first for the shell; network-first for state APIs.
 
-const VERSION = 'sriya-v14-2026-05-22-syncdot-fix';
+const VERSION = 'sriya-v15-2026-05-22-pull-backoff';
 const SHELL_CACHE = `${VERSION}-shell`;
 const RUNTIME_CACHE = `${VERSION}-runtime`;
 

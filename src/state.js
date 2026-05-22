@@ -360,38 +360,64 @@ async function syncToNeon() {
   }
 }
 
-// Background pull: every 5s while tab is visible + online + init done.
-// Merges remote into local. Does NOT scheduleSync (no echo loops).
-let _pullInterval = null;
+// Background pull: schedules itself with setTimeout (not setInterval) so a
+// slow pull can never pile up. Single-flight via _isPulling.  Exponential
+// backoff on errors so a flapping API doesn't lock the event loop.
+let _pullTimer = null;
+let _isPulling = false;
+let _pullBackoffMs = 12_000;   // base interval — relaxed from 5s
+const PULL_MIN_MS = 12_000;
+const PULL_MAX_MS = 120_000;
+
 function startPeriodicPull() {
   stopPeriodicPull();
   if (IS_GUEST) return;
-  _pullInterval = setInterval(async () => {
-    if (document.visibilityState !== 'visible') return;
-    if (!navigator.onLine) return;
-    if (!_initialMergeDone) return;
-    if (_isSyncing) return;
-    try {
-      const remote = await loadFromNeon();
-      if (!remote) return;
+  schedulePull(PULL_MIN_MS);
+}
+function stopPeriodicPull() {
+  if (_pullTimer) { clearTimeout(_pullTimer); _pullTimer = null; }
+}
+function schedulePull(delay) {
+  if (_pullTimer) clearTimeout(_pullTimer);
+  _pullTimer = setTimeout(runPull, Math.max(2000, delay));
+}
+async function runPull() {
+  _pullTimer = null;
+  if (IS_GUEST) return;
+  if (document.visibilityState !== 'visible') { schedulePull(PULL_MIN_MS); return; }
+  if (!navigator.onLine) { schedulePull(PULL_MIN_MS); return; }
+  if (!_initialMergeDone) { schedulePull(PULL_MIN_MS); return; }
+  if (_isSyncing || _isPulling) { schedulePull(PULL_MIN_MS); return; }
+  _isPulling = true;
+  let ok = true;
+  try {
+    const remote = await loadFromNeon();
+    if (remote) {
       const merged = deepMerge(_state, remote);
       const before = JSON.stringify(_state);
       const after = JSON.stringify(merged);
-      if (before === after) return; // nothing new from remote · no loop
-      _state = merged;
-      const lTs = Date.parse(JSON.parse(before).updatedAt || 0) || 0;
-      const rTs = Date.parse(remote.updatedAt || 0) || 0;
-      _state.updatedAt = new Date(Math.max(lTs, rTs)).toISOString();
-      saveLocal(_state);
-      notify();
-      // Remember we've effectively "received" this · prevents redundant push echo.
-      _lastPushedJSON = JSON.stringify(_state);
-      console.log('[sync] background pull merged remote changes');
-    } catch (e) { /* offline / timeout · ignore */ }
-  }, 5_000);
-}
-function stopPeriodicPull() {
-  if (_pullInterval) { clearInterval(_pullInterval); _pullInterval = null; }
+      if (before !== after) {
+        _state = merged;
+        const lTs = Date.parse(JSON.parse(before).updatedAt || 0) || 0;
+        const rTs = Date.parse(remote.updatedAt || 0) || 0;
+        _state.updatedAt = new Date(Math.max(lTs, rTs)).toISOString();
+        saveLocal(_state);
+        notify();
+        _lastPushedJSON = JSON.stringify(_state);
+      }
+      emitSyncStatus('ok');
+    } else {
+      ok = false;
+    }
+  } catch (e) {
+    ok = false;
+  } finally {
+    _isPulling = false;
+    _pullBackoffMs = ok
+      ? PULL_MIN_MS
+      : Math.min(PULL_MAX_MS, Math.max(PULL_MIN_MS, _pullBackoffMs * 2));
+    schedulePull(_pullBackoffMs);
+  }
 }
 if (typeof document !== 'undefined') {
   document.addEventListener('visibilitychange', () => {
