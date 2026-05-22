@@ -33,16 +33,13 @@ function applyStatus(status) {
 export function mountSyncStatus() {
   if (_root) return; // mount once
 
-  _dot = el('button', {
-    type: 'button',
-    'aria-label': 'sync status',
-    title: 'tap to sync · long-press for details',
+  _dot = el('span', {
+    'aria-hidden': 'true',
     style: {
-      width: '12px', height: '12px',
+      width: '10px', height: '10px',
       borderRadius: '50%',
       background: colorFor('syncing'),
-      border: 'none', cursor: 'pointer',
-      padding: 0, margin: 0,
+      flexShrink: 0,
       transition: 'background 0.25s ease, box-shadow 0.25s ease',
       boxShadow: `0 0 0 2px color-mix(in srgb, ${colorFor('syncing')} 30%, transparent)`,
     },
@@ -57,27 +54,35 @@ export function mountSyncStatus() {
     },
   }, 'syncing…');
 
-  _root = el('div', {
+  // Make the WHOLE pill a button so any tap on the chip works (not just the inner dot).
+  _root = el('button', {
     id: 'sync-status',
+    type: 'button',
+    'aria-label': 'sync status',
+    title: 'tap to sync · long-press for details',
     style: {
       position: 'fixed', top: '6px', right: '10px',
       zIndex: 9999,
       display: 'flex', alignItems: 'center', gap: '6px',
-      padding: '4px 8px',
+      padding: '4px 10px',
       borderRadius: '999px',
       background: 'color-mix(in srgb, var(--surface) 80%, transparent)',
       backdropFilter: 'blur(8px)',
       WebkitBackdropFilter: 'blur(8px)',
       border: '1px solid var(--line)',
+      cursor: 'pointer',
+      WebkitTapHighlightColor: 'transparent',
+      touchAction: 'manipulation',
     },
   }, [_dot, _label]);
 
-  // Tap → force sync
+  // Tap → force sync. Press-and-hold → diagnostic toast.
   let pressTimer = null;
+  let longPressFired = false;
+
   const onPress = async () => {
-    const s = getState();
-    if (_dot.dataset.status === 'syncing') return;
     applyStatus('syncing');
+    flashPulse();
     try {
       await syncNow();
       applyStatus(navigator.onLine ? 'ok' : 'offline');
@@ -95,19 +100,36 @@ export function mountSyncStatus() {
     const skin   = s.health?.skincare?.log?.length ?? 0;
     const up     = s.updatedAt ? new Date(s.updatedAt).toLocaleTimeString() : '—';
     toast(`local · ${tasks} tasks · ${journ} journal · ${skin} skincare · last touch ${up}`);
+    flashPulse();
+    try { navigator.vibrate?.(15); } catch {}
   };
 
-  _dot.addEventListener('click', (e) => {
+  function flashPulse() {
+    _root.style.transform = 'scale(0.92)';
+    setTimeout(() => { _root.style.transform = 'scale(1)'; }, 120);
+  }
+
+  _root.addEventListener('pointerdown', (e) => {
+    longPressFired = false;
+    pressTimer = setTimeout(() => {
+      pressTimer = null;
+      longPressFired = true;
+      onLongPress();
+    }, 450);
+  });
+  _root.addEventListener('pointerup', () => {
     if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
+  });
+  _root.addEventListener('pointercancel', () => {
+    if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
+  });
+  _root.addEventListener('click', (e) => {
+    if (longPressFired) { longPressFired = false; return; } // long-press already handled
     onPress();
   });
-  _dot.addEventListener('pointerdown', () => {
-    pressTimer = setTimeout(() => { pressTimer = null; onLongPress(); }, 600);
-  });
-  _dot.addEventListener('pointerup', () => {
-    if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
-  });
-  _dot.addEventListener('pointercancel', () => { if (pressTimer) clearTimeout(pressTimer); pressTimer = null; });
+
+  // Smooth transition for the pulse
+  _root.style.transition = 'transform 0.12s ease';
 
   document.body.appendChild(_root);
 
