@@ -38,6 +38,11 @@ input, textarea, select, .input, .select { max-width: 100%; box-sizing: border-b
 
 a { color: var(--primary-deep); text-decoration: none; }
 button { font: inherit; color: inherit; cursor: pointer; }
+/* Force native chrome off for nav-tab buttons specifically — without this
+   the More tab (a <button>) renders with the browser's default border and
+   background, which shows as a translucent rectangle around the icon. The
+   other nav tabs (<a> elements) don't have native chrome so they look fine. */
+.nav__tab { background: transparent; border: 0; -webkit-appearance: none; appearance: none; }
 img, svg { display: block; max-width: 100%; }
 
 /* A11y: visible focus rings, respect prefers-reduced-motion already handled in tokens */
