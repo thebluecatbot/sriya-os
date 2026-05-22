@@ -9,10 +9,22 @@ import { fmtMinutes, todayKey, fmtClock, fmtDate } from '../utils/format.js';
 let viewMode = 'week';     // day | week | month
 let cursorDate = todayKey();
 
+// Format a Date as YYYY-MM-DD in *local* time. Using toISOString() returns UTC,
+// which breaks day navigation for users in non-UTC zones (e.g. IST is UTC+5:30,
+// so forward arrow looked stuck and backward jumped 2 days).
+function localISODate(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 export function renderCalendar(_params, host) {
   let unsub = null;
   const paint = () => { clear(host); host.appendChild(buildCalendar()); };
   paint();
+  // Reset scroll to top each time the calendar opens (mobile was landing mid-page).
+  try { window.scrollTo({ top: 0, left: 0, behavior: 'instant' }); host.scrollIntoView({ block: 'start' }); } catch {}
   unsub = subscribe(paint);
   // Tick once a minute so the 'now' line and completion-timer badges refresh.
   const t = setInterval(() => {
@@ -65,7 +77,7 @@ function shift(dir) {
   if (viewMode === 'day')   d.setDate(d.getDate() + dir);
   if (viewMode === 'week')  d.setDate(d.getDate() + 7 * dir);
   if (viewMode === 'month') d.setMonth(d.getMonth() + dir);
-  cursorDate = d.toISOString().slice(0, 10);
+  cursorDate = localISODate(d);
   paintNow();
 }
 
@@ -115,26 +127,30 @@ function weekView(s) {
   for (let i = 0; i < 7; i++) {
     const d = new Date(startOfWeek);
     d.setDate(d.getDate() + i);
-    days.push(d.toISOString().slice(0, 10));
+    days.push(localISODate(d));
   }
   return el('div', { class: 'card' }, [
     el('div', { class: 'card__title' }, [
       el('i', { class: 'ph-duotone ph-calendar-blank' }),
       `${fmtDay(days[0])} – ${fmtDay(days[6])}`,
     ]),
-    el('div', { class: 'row', style: { gap: '2px', overflow: 'hidden' } },
-      days.map((d) => el('div', { style: { flex: 1, minWidth: 0 } }, [
-        el('div', {
-          style: {
-            textAlign: 'center', fontSize: '0.7rem',
-            fontWeight: d === todayKey() ? 700 : 500,
-            color: d === todayKey() ? 'var(--primary-deep)' : 'var(--ink-mute)',
-            padding: '4px 0',
-          }
-        }, fmtDay(d)),
-      ]))
-    ),
-    timeGrid(s, days, { compact: true }),
+    el('div', { class: 'calendar-week-scroll' }, [
+      el('div', null, [
+        el('div', { class: 'row', style: { gap: '2px' } },
+          days.map((d) => el('div', { style: { flex: 1, minWidth: 0 } }, [
+            el('div', {
+              style: {
+                textAlign: 'center', fontSize: '0.75rem',
+                fontWeight: d === todayKey() ? 700 : 500,
+                color: d === todayKey() ? 'var(--primary-deep)' : 'var(--ink-mute)',
+                padding: '6px 0',
+              }
+            }, fmtDay(d)),
+          ]))
+        ),
+        timeGrid(s, days, { compact: false }),
+      ]),
+    ]),
   ]);
 }
 
@@ -146,7 +162,7 @@ function startOfWeekDate(date) {
   const d = new Date(date + 'T00:00:00');
   const dow = d.getDay();
   d.setDate(d.getDate() - dow);
-  return d.toISOString().slice(0, 10);
+  return localISODate(d);
 }
 
 // Render a 24-hour grid with event blocks across one or more days.
@@ -278,7 +294,7 @@ function monthView(s) {
     el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '2px', fontSize: '0.7rem' } }, [
       ...['s','m','t','w','t','f','s'].map((l) => el('div', { class: 'muted', style: { textAlign: 'center', padding: '4px 0' } }, l)),
       ...cells.map((dt) => {
-        const key = dt.toISOString().slice(0, 10);
+        const key = localISODate(dt);
         const inMonth = dt.getMonth() === d.getMonth();
         const isToday = key === todayKey();
         const evs = eventsOn(s, key);

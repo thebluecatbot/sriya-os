@@ -8,12 +8,9 @@ import { todayKey, dayPart } from '../utils/format.js';
 import { pushSupported, getStatus, subscribeMino, unsubscribeMino, showLocalTest } from '../utils/push.js';
 
 export function openMinoPanel() {
-  const sheet = openSheet(renderPanel, { title: 'Mino ♡' });
-  // Focus input if we render one (chat field).
-  setTimeout(() => {
-    const i = sheet?.querySelector?.('input, textarea');
-    if (i) i.focus();
-  }, 320);
+  // Open without auto-focusing the chat input — that was popping up the mobile
+  // keyboard immediately, which is annoying. User can tap the chat to type.
+  openSheet(renderPanel, { title: 'Mino ♡' });
 }
 
 function renderPanel() {

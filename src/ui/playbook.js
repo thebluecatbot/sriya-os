@@ -8,6 +8,10 @@ import { el, clear, toast } from '../utils/dom.js';
 import { update, uid, TODAY } from '../state.js';
 import { todayKey } from '../utils/format.js';
 
+// Persisted across re-renders so periodic-pull notify() doesn't collapse cards
+// the user has already expanded. (This was the "card disappears after 5 seconds" bug.)
+const _expandedScenarios = new Set();
+
 // Each scenario can have:
 //   lines: [{ who: 'you'|'m', text: '...' }]  · default linear dialogue
 //   branches: { key, options: [{ label, lines, ...nested }] }  · tap-to-choose forks
@@ -443,8 +447,10 @@ function build() {
 }
 
 function scenarioCard(sc) {
-  const body = el('div', { class: 'stack', style: { display: 'none', marginTop: '12px' } });
-  let opened = false;
+  const startOpen = _expandedScenarios.has(sc.id);
+  const body = el('div', { class: 'stack', style: { display: startOpen ? '' : 'none', marginTop: '12px' } });
+  let opened = startOpen;
+  if (startOpen) renderDialogue(body, sc);
 
   const head = el('button', {
     class: 'row', type: 'button',
@@ -452,8 +458,13 @@ function scenarioCard(sc) {
     onClick: () => {
       opened = !opened;
       body.style.display = opened ? '' : 'none';
-      if (opened) renderDialogue(body, sc);
-      else body.innerHTML = '';
+      if (opened) {
+        _expandedScenarios.add(sc.id);
+        renderDialogue(body, sc);
+      } else {
+        _expandedScenarios.delete(sc.id);
+        body.innerHTML = '';
+      }
     }
   }, [
     el('i', { class: `ph-duotone ${sc.icon}`, style: { color: 'var(--primary)', fontSize: '1.5rem' } }),
@@ -474,13 +485,64 @@ function renderDialogue(host, scenarioOrBranch) {
   walkNode(host, scenarioOrBranch);
 }
 
+// Stagger Mino's lines so they appear one-by-one like a real conversation.
+// 'you' lines (user's own words) appear instantly; mino lines wait ~1.2s.
+const LINE_DELAY_MS_MINO = 1200;
+const LINE_DELAY_MS_YOU  = 200;
+
 function walkNode(host, node) {
-  // 1) Render any "lines" the node carries
-  for (const line of (node.lines || [])) host.appendChild(lineRow(line));
-  // 2) If the node has an inline branches block, render its options
-  if (node.branches) host.appendChild(branchBlock(node.branches, host));
-  // 3) If the node has an ending, render it
-  if (node.ending) host.appendChild(endingRow(node.ending));
+  const lines = node.lines || [];
+  let delay = 0;
+  lines.forEach((line, i) => {
+    if (i === 0 && line.who === 'you') {
+      // First "you" line is what the user just tapped; show it immediately.
+      host.appendChild(lineRow(line));
+    } else {
+      const placeholder = el('div'); // reserve order
+      host.appendChild(placeholder);
+      delay += (line.who === 'm' ? LINE_DELAY_MS_MINO : LINE_DELAY_MS_YOU);
+      const myDelay = delay;
+      // typing indicator while waiting
+      if (line.who === 'm') {
+        const dots = typingDots();
+        placeholder.replaceWith(dots);
+        setTimeout(() => {
+          const row = lineRow(line);
+          if (dots.parentNode) dots.parentNode.replaceChild(row, dots);
+        }, myDelay);
+      } else {
+        setTimeout(() => {
+          if (placeholder.parentNode) placeholder.parentNode.replaceChild(lineRow(line), placeholder);
+        }, myDelay);
+      }
+    }
+  });
+
+  // Reveal branch options and endings AFTER the last line has had time to land.
+  const tail = () => {
+    if (node.branches) host.appendChild(branchBlock(node.branches, host));
+    if (node.ending) host.appendChild(endingRow(node.ending));
+  };
+  if (delay > 0) setTimeout(tail, delay + 300);
+  else tail();
+}
+
+function typingDots() {
+  return el('div', {
+    style: { display: 'flex', justifyContent: 'flex-start', margin: '4px 0' }
+  }, [
+    el('div', {
+      style: {
+        background: 'var(--primary-soft)', color: 'var(--primary-deep)',
+        padding: '8px 14px', borderRadius: '14px', fontSize: '0.875rem',
+        display: 'inline-flex', gap: '4px',
+      }
+    }, [
+      el('span', { style: { animation: 'mino-dot 1.2s infinite', opacity: 0.4 } }, '·'),
+      el('span', { style: { animation: 'mino-dot 1.2s infinite 0.2s', opacity: 0.4 } }, '·'),
+      el('span', { style: { animation: 'mino-dot 1.2s infinite 0.4s', opacity: 0.4 } }, '·'),
+    ])
+  ]);
 }
 
 function lineRow(line) {

@@ -625,6 +625,55 @@ body[data-login="on"] { padding: 0 !important; }
   margin-bottom: 4px;
 }
 
+/* Dark + midnight modes · invert the yellow card so the rest of the dark UI
+   feels consistent. Deep amber background with cream text. */
+[data-mode="dark"] [data-added-by="prakhar"],
+[data-theme="midnight"] [data-added-by="prakhar"],
+html.dark [data-added-by="prakhar"] {
+  background: linear-gradient(160deg, #4A3A12 0%, #5C3F0E 100%) !important;
+  border-color: #B88E2D !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
+  color: #FFEAA7 !important;
+}
+[data-mode="dark"] [data-added-by="prakhar"] *:not(input):not(textarea):not(select):not(button):not(.chip--primary),
+[data-theme="midnight"] [data-added-by="prakhar"] *:not(input):not(textarea):not(select):not(button):not(.chip--primary),
+html.dark [data-added-by="prakhar"] *:not(input):not(textarea):not(select):not(button):not(.chip--primary) {
+  color: #FFEAA7 !important;
+}
+[data-mode="dark"] [data-added-by="prakhar"] .muted,
+[data-mode="dark"] [data-added-by="prakhar"] .check__meta,
+[data-theme="midnight"] [data-added-by="prakhar"] .muted,
+[data-theme="midnight"] [data-added-by="prakhar"] .check__meta,
+html.dark [data-added-by="prakhar"] .muted,
+html.dark [data-added-by="prakhar"] .check__meta { color: #E8C97A !important; }
+[data-mode="dark"] [data-added-by="prakhar"] strong,
+[data-theme="midnight"] [data-added-by="prakhar"] strong,
+html.dark [data-added-by="prakhar"] strong { color: #FFF8D6 !important; }
+[data-mode="dark"] [data-added-by="prakhar"] .chip,
+[data-theme="midnight"] [data-added-by="prakhar"] .chip,
+html.dark [data-added-by="prakhar"] .chip {
+  background: rgba(245, 201, 69, 0.18) !important;
+  color: #FFEAA7 !important;
+  border-color: rgba(245, 201, 69, 0.4) !important;
+}
+[data-mode="dark"] [data-added-by="prakhar"]::before,
+[data-theme="midnight"] [data-added-by="prakhar"]::before,
+html.dark [data-added-by="prakhar"]::before {
+  background: #B88E2D !important;
+  color: #2A1F08 !important;
+}
+
+/* Calendar weekly view · horizontally scrollable on narrow screens so
+   columns don't get squeezed to unreadable. */
+.calendar-week-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.calendar-week-scroll > * { min-width: 640px; }
+
+/* Mino dialogue typing dots animation. */
+@keyframes mino-dot {
+  0%, 60%, 100% { opacity: 0.3; }
+  30%           { opacity: 1; }
+}
+
 /* Gate screen · calm petals further, hide Mino */
 body[data-gate="on"] #mino-root,
 body[data-gate="on"] #capture-fab { display: none !important; }

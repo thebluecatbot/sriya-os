@@ -839,14 +839,16 @@ function tasksInBucket(s, bucket) {
   } else {
     list = all.filter((t) => t.status !== 'done' && t.category === bucket);
   }
-  // Order: main thing first, then priority today > soon > someday, then createdAt asc
+  // Order: main thing first, then priority today > soon > someday,
+  // then due-date asc, then newest createdAt first (so freshly-added tasks land on top).
   const main = s.tasks.mainThingByDate[todayKey()];
   const rank = { today: 0, soon: 1, someday: 2 };
   list.sort((a, b) => {
     if (a.id === main) return -1;
     if (b.id === main) return 1;
     return (rank[a.priority] ?? 1) - (rank[b.priority] ?? 1)
-      || (a.due || '9999').localeCompare(b.due || '9999');
+      || (a.due || '9999').localeCompare(b.due || '9999')
+      || (b.createdAt || '').localeCompare(a.createdAt || '');
   });
   return list;
 }

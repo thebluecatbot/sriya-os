@@ -16,6 +16,7 @@ export function renderMe(_params, host) {
   let unsub = null;
   const paint = () => { clear(host); host.appendChild(buildMe()); };
   paint();
+  try { window.scrollTo({ top: 0, left: 0, behavior: 'instant' }); host.scrollIntoView({ block: 'start' }); } catch {}
   unsub = subscribe(paint);
   host.addEventListener('beforerouted', () => unsub && unsub(), { once: true });
 }

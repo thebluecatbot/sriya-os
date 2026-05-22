@@ -329,7 +329,7 @@ async function syncToNeon() {
   }
 }
 
-// Background pull: every 25s while tab is visible + online + init done.
+// Background pull: every 5s while tab is visible + online + init done.
 // Merges remote into local. Does NOT scheduleSync (no echo loops).
 let _pullInterval = null;
 function startPeriodicPull() {
@@ -357,7 +357,7 @@ function startPeriodicPull() {
       _lastPushedJSON = JSON.stringify(_state);
       console.log('[sync] background pull merged remote changes');
     } catch (e) { /* offline / timeout · ignore */ }
-  }, 25_000);
+  }, 5_000);
 }
 function stopPeriodicPull() {
   if (_pullInterval) { clearInterval(_pullInterval); _pullInterval = null; }
@@ -366,6 +366,23 @@ if (typeof document !== 'undefined') {
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') startPeriodicPull();
     else stopPeriodicPull();
+  });
+}
+
+// Same-browser instant propagation: when another tab writes to the same
+// localStorage key, re-read and notify(). Cross-tab feels real-time.
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', (ev) => {
+    if (!ev.key || ev.key !== `${NS}.state`) return;
+    if (!ev.newValue) return;
+    try {
+      const incoming = JSON.parse(ev.newValue);
+      const merged = deepMerge(_state, incoming);
+      if (JSON.stringify(_state) !== JSON.stringify(merged)) {
+        _state = merged;
+        notify();
+      }
+    } catch {}
   });
 }
 
