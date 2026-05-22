@@ -4,6 +4,7 @@
 
 import { todayKey } from './utils/format.js';
 import { namespaceKey } from './auth.js';
+import { subscribeStateChanges } from './utils/realtime.js';
 
 // Both real users share Sriya's namespace so they see the same data.
 // Guest-name URL param kept as an escape hatch for read-only previews.
@@ -373,9 +374,28 @@ function startPeriodicPull() {
   stopPeriodicPull();
   if (IS_GUEST) return;
   schedulePull(PULL_MIN_MS);
+  // Subscribe to Supabase Realtime for push-based updates · server pings us
+  // within ~100ms of another device's write. Polling continues as a safety
+  // net in case the Realtime channel drops.
+  ensureRealtimeSubscription();
 }
 function stopPeriodicPull() {
   if (_pullTimer) { clearTimeout(_pullTimer); _pullTimer = null; }
+}
+
+// One subscription per session. Realtime delivers row-change notifications;
+// on each one we immediately runPull() to merge the new server state.
+let _realtimeUnsub = null;
+async function ensureRealtimeSubscription() {
+  if (_realtimeUnsub) return;
+  try {
+    _realtimeUnsub = await subscribeStateChanges(NS, () => {
+      // Server says the row changed · fetch the freshest snapshot and merge.
+      if (!_isPulling && !_isSyncing) runPull();
+    });
+  } catch (e) {
+    console.warn('[realtime] subscribe failed', e?.message);
+  }
 }
 function schedulePull(delay) {
   if (_pullTimer) clearTimeout(_pullTimer);
