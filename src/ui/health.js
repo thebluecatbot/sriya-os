@@ -1,10 +1,10 @@
 // Health hub · meds, skincare, meditation, workouts, sleep, mood, meals.
 // Sub-section toggle keeps the page light; each section paginates its own log.
 
-import { el, clear, openSheet, closeSheet, toast, bloomAt, haptic } from '../utils/dom.js';
+import { el, clear, openSheet, closeSheet, toast, bloomAt, haptic, viewOnlyBanner } from '../utils/dom.js';
 import { getState, update, subscribe, uid } from '../state.js';
 import { fmtMinutes, todayKey, fmtClock, fmtDate } from '../utils/format.js';
-import { currentUser } from '../auth.js';
+import { currentUser, isCopilot, writeGate } from '../auth.js';
 
 const SECTIONS = [
   { id: 'meds',       label: 'meds',       icon: 'ph-pill' },
@@ -31,6 +31,8 @@ function buildHealth() {
   const wrap = el('div', { class: 'stack' });
 
   wrap.appendChild(el('h1', null, ['health ', el('i', { class: 'ph-duotone ph-flower-tulip', style: { color: 'var(--primary)', fontSize: '1.5rem' } })]));
+
+  if (isCopilot()) wrap.appendChild(viewOnlyBanner('view-only · sriya\'s health · you can browse, not edit'));
 
   // Section pills
   wrap.appendChild(el('div', { class: 'row', style: { gap: '6px', flexWrap: 'wrap' } },
@@ -80,6 +82,7 @@ function medsSection(s) {
             ]);
             row.addEventListener('click', (e) => {
               e.preventDefault();
+              if (!writeGate('health', 'meds')) return;
               const rect = row.querySelector('.check__box').getBoundingClientRect();
               update((d) => {
                 // Clear today's prior entries for this med, then add fresh one if taking.
@@ -182,6 +185,7 @@ function adherenceCard(s) {
 }
 
 function openMedEdit(existing) {
+  if (!writeGate('health', 'meds')) return;
   const m = existing ? JSON.parse(JSON.stringify(existing)) : {
     id: uid('m'), name: '', type: '', dose: '', schedule: 'morning', withFood: false, stockCount: null,
   };
@@ -271,6 +275,7 @@ function routineCard(s, kind) {
           ]);
           row.addEventListener('click', (e) => {
             e.preventDefault();
+            if (!writeGate('health', 'skincare')) return;
             update((d) => {
               d.health.skincare.log ||= [];
               // toggle: if any entry today for this kind+step exists, remove it;
@@ -288,6 +293,7 @@ function routineCard(s, kind) {
     el('div', { class: 'row', style: { gap: '6px', marginTop: '8px' } }, [
       el('button', { class: 'btn btn--soft', onClick: () => editRoutine(kind) }, [el('i', { class: 'ph ph-pencil-simple' }), ' edit']),
       el('button', { class: 'btn btn--ghost', onClick: () => {
+        if (!writeGate('health', 'skincare')) return;
         update((d) => {
           (d.health.skincare.log ||= []).push({ id: uid('sk'), date: day, kind, step: 'whole routine', time: new Date().toISOString() });
         });
@@ -344,6 +350,7 @@ function productsCard(s) {
 }
 
 function openProductEdit() {
+  if (!writeGate('health', 'skincare')) return;
   const fName = el('input', { class: 'input', placeholder: 'product name' });
   const fOpened = el('input', { class: 'input', type: 'date', value: new Date().toISOString().slice(0, 10) });
   const fLife = el('input', { class: 'input', type: 'number', min: 1, max: 36, value: 6, placeholder: 'months' });
@@ -392,7 +399,7 @@ function logQuickAdder(kind, presets, onPick) {
   const row = el('div', { class: 'row', style: { flexWrap: 'wrap', gap: '6px' } });
   presets.forEach((m) => row.appendChild(el('button', {
     class: 'chip', type: 'button', style: { cursor: 'pointer' },
-    onClick: () => { onPick(parseInt(m, 10), null); toast(`${kind} · ${m}m logged ✓`); }
+    onClick: () => { if (!writeGate('health', 'log')) return; onPick(parseInt(m, 10), null); toast(`${kind} · ${m}m logged ✓`); }
   }, `${m}m`)));
   return row;
 }
@@ -493,6 +500,7 @@ function quickLogWorkout(type) {
 
 // Full add UI: strength (sets/reps/kg) OR cardio (duration/incline/speed)
 function openAddExercise(prefillName = '') {
+  if (!writeGate('health', 'log')) return;
   let kind = ['treadmill','cardio','run','walk','cycle','swim'].includes((prefillName || '').toLowerCase()) ? 'cardio' : 'strength';
   const tabRow = el('div', { class: 'row', style: { gap: '6px' } });
   const fName = el('input', { class: 'input', value: prefillName || '', placeholder: kind === 'cardio' ? 'e.g. treadmill, run' : 'e.g. squats, deadlift' });

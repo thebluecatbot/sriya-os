@@ -1,11 +1,12 @@
 // Mino's panel · chat + suggestions + check-in + panic button + controls.
 
-import { $, el, clear, openSheet, closeSheet, toast } from '../utils/dom.js';
+import { $, el, clear, openSheet, closeSheet, toast, viewOnlyBanner } from '../utils/dom.js';
 import { getState, update, TODAY } from '../state.js';
 import { say } from './voice.js';
 import { snoozeMino, nextAction } from './mascot.js';
 import { todayKey, dayPart } from '../utils/format.js';
 import { pushSupported, getStatus, subscribeMino, unsubscribeMino, showLocalTest } from '../utils/push.js';
+import { isCopilot, writeGate } from '../auth.js';
 
 export function openMinoPanel() {
   // Open without auto-focusing the chat input — that was popping up the mobile
@@ -21,6 +22,8 @@ function renderPanel() {
   const action = nextAction(s);
 
   const wrap = el('div', { class: 'stack' });
+
+  if (isCopilot()) wrap.appendChild(viewOnlyBanner('mino is sriya\'s · view-only for you'));
 
   wrap.appendChild(el('div', { class: 'card card--hero' }, [
     el('div', { style: { fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: '1.25rem' } },
@@ -225,6 +228,7 @@ function quickToggleRow(taskId, label) {
   ]);
   row.addEventListener('click', (e) => {
     e.preventDefault();
+    if (!writeGate('nonneg', 'tick')) return;
     update((d) => {
       const day = todayKey();
       d.nonNegotiables.tickLog[day] = d.nonNegotiables.tickLog[day] || {};
@@ -262,6 +266,7 @@ function chatBlock() {
   }
 
   async function onSend() {
+    if (!writeGate('mino', 'chat')) return;
     const text = input.value.trim();
     if (!text) return;
     input.value = '';
@@ -308,7 +313,7 @@ function controlsBlock() {
       el('span', { class: 'field__label' }, 'chattiness'),
       el('select', {
         class: 'select',
-        onChange: (e) => update((d) => { d.mino.chattiness = e.target.value; })
+        onChange: (e) => { if (!writeGate('mino', 'settings')) return; update((d) => { d.mino.chattiness = e.target.value; }); }
       }, [
         ['chatty', 'chatty · lots of pings'],
         ['balanced', 'balanced · once per day-part'],
@@ -320,18 +325,18 @@ function controlsBlock() {
       el('div', { class: 'row', style: { gap: '8px' } }, [
         el('input', {
           class: 'input', type: 'time', value: s.mino.quietHours.from,
-          onChange: (e) => update((d) => { d.mino.quietHours.from = e.target.value; })
+          onChange: (e) => { if (!writeGate('mino', 'settings')) return; update((d) => { d.mino.quietHours.from = e.target.value; }); }
         }),
         el('span', { class: 'muted' }, '→'),
         el('input', {
           class: 'input', type: 'time', value: s.mino.quietHours.to,
-          onChange: (e) => update((d) => { d.mino.quietHours.to = e.target.value; })
+          onChange: (e) => { if (!writeGate('mino', 'settings')) return; update((d) => { d.mino.quietHours.to = e.target.value; }); }
         }),
       ]),
     ]),
     el('div', { class: 'row', style: { gap: '8px' } }, [
-      el('button', { class: 'btn btn--soft', type: 'button', onClick: () => { snoozeMino(60);  toast('Mino snoozed 1h'); }}, 'snooze 1h'),
-      el('button', { class: 'btn btn--soft', type: 'button', onClick: () => { snoozeMino(240); toast('Mino snoozed 4h'); }}, 'snooze 4h'),
+      el('button', { class: 'btn btn--soft', type: 'button', onClick: () => { if (!writeGate('mino', 'settings')) return; snoozeMino(60);  toast('Mino snoozed 1h'); }}, 'snooze 1h'),
+      el('button', { class: 'btn btn--soft', type: 'button', onClick: () => { if (!writeGate('mino', 'settings')) return; snoozeMino(240); toast('Mino snoozed 4h'); }}, 'snooze 4h'),
     ]),
   ]);
 }

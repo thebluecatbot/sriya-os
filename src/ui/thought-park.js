@@ -1,10 +1,10 @@
 // Thought-park inbox · one place to park stray/spiraling thoughts.
 // Triage to task / idea / journal line / delete.
 
-import { el, clear, openSheet, closeSheet, toast } from '../utils/dom.js';
+import { el, clear, openSheet, closeSheet, toast, viewOnlyBanner } from '../utils/dom.js';
 import { getState, subscribe, update, uid, TODAY } from '../state.js';
 import { relative, todayKey } from '../utils/format.js';
-import { currentUser } from '../auth.js';
+import { currentUser, isCopilot, writeGate } from '../auth.js';
 
 let pageSize = 30;
 
@@ -22,9 +22,12 @@ function build() {
 
   wrap.appendChild(el('h1', null, ['thought-park ', el('i', { class: 'ph-duotone ph-cloud', style: { color: 'var(--primary)', fontSize: '1.5rem' } })]));
 
+  if (isCopilot()) wrap.appendChild(viewOnlyBanner('view-only · sriya\'s thoughts'));
+
   // Quick add
   const input = el('input', { class: 'input', placeholder: 'park a thought · type or speak', 'aria-label': 'Park a thought' });
   function doAdd() {
+    if (!writeGate('thoughtpark', 'write')) return;
     const v = input.value.trim();
     if (!v) return;
     update((d) => {
@@ -85,6 +88,7 @@ function itemCard(i) {
 }
 
 function triageToTask(i) {
+  if (!writeGate('thoughtpark', 'write')) return;
   update((d) => {
     d.tasks.negotiable.unshift({
       id: uid('t'), type: 'negotiable', title: i.text, emoji: '', category: 'Soon',
@@ -97,6 +101,7 @@ function triageToTask(i) {
   toast('→ task ✓');
 }
 function triageToIdea(i) {
+  if (!writeGate('thoughtpark', 'write')) return;
   update((d) => {
     d.substack.ideas.unshift({ id: uid('i'), text: i.text, createdAt: new Date().toISOString() });
     const it = d.thoughtPark.items.find((x) => x.id === i.id);
@@ -105,6 +110,7 @@ function triageToIdea(i) {
   toast('→ substack idea ✓');
 }
 function triageToJournal(i) {
+  if (!writeGate('thoughtpark', 'write')) return;
   update((d) => {
     d.journal.entries.unshift({
       id: uid('j'), date: todayKey(), time: new Date().toISOString(), body: i.text, mood: null,
@@ -115,5 +121,6 @@ function triageToJournal(i) {
   toast('→ journal ✓');
 }
 function removeItem(i) {
+  if (!writeGate('thoughtpark', 'write')) return;
   update((d) => { d.thoughtPark.items = d.thoughtPark.items.filter((x) => x.id !== i.id); });
 }

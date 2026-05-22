@@ -33,6 +33,81 @@ export function canAccess(path) {
   return !PRIVATE_FOR_COPILOT.has(path);
 }
 
+// canWrite(domain, mode) → bool. Single source of truth for permission gates.
+// Sriya: always true. Prakhar: per the matrix below. Use this both in UI
+// (greying out controls) and at every state-mutation site (early-return).
+//
+// domain examples: 'task' | 'calendar' | 'timer' | 'journal' | 'health' |
+//                  'nonneg' | 'thoughtpark' | 'reading' | 'substack' | 'upsc'
+//                  'mino' | 'settings' | 'places' | 'people' | 'doomscroll'
+// mode    examples: 'add' | 'edit' | 'edit-own' | 'edit-others' | 'delete'
+//                   'tick' | 'start' | 'stop' | 'log' | 'write'
+const COPILOT_RULES = {
+  // shared / collaborative
+  'task:add':         true,
+  'task:edit-own':    true,
+  'task:edit-others': false,
+  'task:tick':        true,            // prakhar can mark sriya's tasks done
+  'task:delete':      false,
+  'task:schedule':    true,            // schedule on calendar
+  'calendar:add':     true,
+  'calendar:edit-own':true,
+  'calendar:delete-own': true,
+  'calendar:edit-others': false,
+  'calendar:delete-others': false,
+  'places:add':       true,
+  'places:edit':      true,
+  'people:add':       true,
+  'people:edit':      true,
+  // personal · view-only for prakhar
+  'timer:start':      false,
+  'timer:stop':       false,
+  'timer:log':        false,
+  'journal:write':    false,
+  'health:log':       false,
+  'health:meds':      false,
+  'health:skincare':  false,
+  'nonneg:tick':      false,
+  'nonneg:edit':      false,
+  'thoughtpark:write': false,
+  'reading:write':    false,
+  'substack:write':   false,
+  'upsc:write':       false,
+  'mino:chat':        false,
+  'mino:settings':    false,
+  'settings:write':   false,
+  'doomscroll:write': false,
+  // dangerous / destructive · prakhar never
+  'data:reset':       false,
+  'data:export':      false,
+};
+
+export function canWrite(domain, mode = 'add') {
+  if (isOwner()) return true;
+  if (!isCopilot()) return false;
+  return COPILOT_RULES[`${domain}:${mode}`] === true;
+}
+
+// Convenience checks
+export function isCopilotReadOnly(domain) {
+  // True if prakhar has zero write modes on this domain.
+  if (isOwner()) return false;
+  return !Object.keys(COPILOT_RULES).some((k) => k.startsWith(`${domain}:`) && COPILOT_RULES[k] === true);
+}
+
+// One-line guard for write handlers. Returns true if write is allowed.
+// If not, fires a toast and returns false. Use at the top of every handler:
+//   if (!writeGate('health', 'log')) return;
+// Avoids importing toast everywhere; module-level dynamic import keeps the
+// auth module dependency-free.
+export function writeGate(domain, mode = 'add', reason = null) {
+  if (canWrite(domain, mode)) return true;
+  const msg = reason || (isCopilot() ? `view-only · sriya's ${domain}` : 'sign in first');
+  // Lazy import to avoid a cycle; dom.js does not import auth.
+  import('./utils/dom.js').then((m) => m.toast(msg)).catch(() => {});
+  return false;
+}
+
 export function login(username, password) {
   const u = (username || '').trim().toLowerCase();
   const p = (password || '').trim();

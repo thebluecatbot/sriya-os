@@ -8,7 +8,7 @@ import { getState, update, subscribe, uid, TODAY } from '../state.js';
 import { fmtMinutes, todayKey } from '../utils/format.js';
 import { parseTask, parseBrainDump } from '../utils/parse-task.js';
 import { pendingDays } from '../utils/recurrence.js';
-import { currentUser } from '../auth.js';
+import { currentUser, canWrite, isCopilot, writeGate } from '../auth.js';
 
 function tomorrowKey() {
   const d = new Date();
@@ -593,9 +593,10 @@ export function openEditSheet(existing) {
     ]),
 
     // "start now" · only for existing tasks; sets timerStartedAt and auto-starts activity timer
-    existing ? el('button', {
+    existing && canWrite('timer', 'start') ? el('button', {
       class: 'btn btn--soft btn--block',
       onClick: async () => {
+        if (!writeGate('timer', 'start')) return;
         const completionMins = parseInt(fCompletion.value, 10) || t.estMins || 30;
         update((d) => {
           const x = d.tasks.negotiable.find((y) => y.id === t.id);
@@ -618,6 +619,10 @@ export function openEditSheet(existing) {
 
     el('div', { class: 'row', style: { gap: '6px', marginTop: '8px' } }, [
       el('button', { class: 'btn btn--block', onClick: () => {
+        // Prakhar can edit own tasks only.
+        if (existing && isCopilot() && t.addedBy && t.addedBy !== 'prakhar') {
+          if (!writeGate('task', 'edit-others', 'view-only · sriya added this task')) return;
+        }
         t.title = fTitle.value.trim();
         t.emoji = fEmoji.value;
         t.category = fBucket.value;
@@ -647,7 +652,7 @@ export function openEditSheet(existing) {
         closeSheet();
         toast(existing ? 'saved ✓' : 'added ✓');
       } }, existing ? 'save' : 'add'),
-      existing ? el('button', { class: 'btn btn--ghost', onClick: () => {
+      existing && canWrite('task', 'delete') ? el('button', { class: 'btn btn--ghost', onClick: () => {
         if (!confirm('delete this task?')) return;
         update((d) => { d.tasks.negotiable = d.tasks.negotiable.filter((x) => x.id !== t.id); });
         closeSheet();
@@ -805,7 +810,7 @@ function openRecurringEdit(existing) {
         closeSheet();
         toast(existing ? 'saved ✓' : 'recurring added ✓');
       } }, 'save'),
-      existing ? el('button', { class: 'btn btn--ghost', onClick: () => {
+      existing && canWrite('task', 'delete') ? el('button', { class: 'btn btn--ghost', onClick: () => {
         if (!confirm('remove this recurring task?')) return;
         update((d) => { d.tasks.recurring = d.tasks.recurring.filter((x) => x.id !== r.id); });
         closeSheet();
@@ -836,6 +841,7 @@ function nonNegotiablesCard(s) {
 }
 
 function openNonNegEditor() {
+  if (!writeGate('nonneg', 'edit')) return;
   const wrap = el('div', { class: 'stack' });
   function paintEditor() {
     wrap.innerHTML = '';

@@ -1,8 +1,18 @@
 // Me / settings tab · theme variant, a11y, backup, language, reset.
 
-import { $, el, clear, toast } from '../utils/dom.js';
-import { getState, update, subscribe, exportAll, importAll, resetAll, syncNow, IS_GUEST, GUEST_NAME } from '../state.js';
-import { currentUserDisplay, isCopilot, logout } from '../auth.js';
+import { $, el, clear, toast, viewOnlyBanner } from '../utils/dom.js';
+import { getState, update as _update, subscribe, exportAll, importAll, resetAll, syncNow, IS_GUEST, GUEST_NAME } from '../state.js';
+import { currentUserDisplay, isCopilot, logout, canWrite } from '../auth.js';
+
+// Shared-namespace settings: prakhar's change would flip for sriya too, so
+// gate all settings writes here. Sriya passes through unchanged.
+function update(mut, opts) {
+  if (!canWrite('settings', 'write')) {
+    toast('view-only · sriya\'s settings');
+    return;
+  }
+  return _update(mut, opts);
+}
 
 const THEMES = [
   { id: 'blush',    label: 'Blush ✿',    swatch: '#FFD2E0' },
@@ -30,6 +40,7 @@ function buildMe() {
       el('span', null, '👋'),
       el('span', null, 'you are in guest mode · Journal, Playbook, and Mino check-ins stay private.')
     ]) : null,
+    isCopilot() ? viewOnlyBanner('settings are sriya\'s — view-only for you') : null,
 
     // Themes
     el('div', { class: 'card' }, [

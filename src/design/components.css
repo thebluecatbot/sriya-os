@@ -43,6 +43,20 @@ button { font: inherit; color: inherit; cursor: pointer; }
    background, which shows as a translucent rectangle around the icon. The
    other nav tabs (<a> elements) don't have native chrome so they look fine. */
 .nav__tab { background: transparent; border: 0; -webkit-appearance: none; appearance: none; }
+
+/* Read-only controls (Prakhar viewing Sriya's private modules).
+   Still visible so he knows the feature exists, but visually muted and
+   non-interactive. The readOnlyize() helper toasts on tap so he gets
+   feedback that it's intentional, not a bug. */
+.is-readonly {
+  opacity: 0.42 !important;
+  cursor: not-allowed !important;
+  filter: saturate(0.6);
+  pointer-events: auto;       /* keep click to fire the toast */
+}
+.is-readonly input,
+.is-readonly textarea,
+.is-readonly select { pointer-events: none !important; }
 img, svg { display: block; max-width: 100%; }
 
 /* A11y: visible focus rings, respect prefers-reduced-motion already handled in tokens */

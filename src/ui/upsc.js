@@ -2,10 +2,11 @@
 // mocks · answer-writing · current affairs · topic notes · essay bank · planner.
 // First-timer roadmap surfaces when there's no data yet.
 
-import { el, clear, openSheet, closeSheet, toast } from '../utils/dom.js';
+import { el, clear, openSheet, closeSheet, toast, viewOnlyBanner } from '../utils/dom.js';
 import { getState, update, subscribe, uid } from '../state.js';
 import { todayKey, fmtMinutes, fmtDate, relative } from '../utils/format.js';
 import { defaultSyllabusTree, STATUS_LABELS, DEFAULT_SOURCES } from '../data/upsc-syllabus.js';
+import { isCopilot, writeGate, isOwner } from '../auth.js';
 
 const SECTIONS = [
   { id: 'dashboard', label: 'today',      icon: 'ph-flower' },
@@ -32,16 +33,17 @@ export function renderUPSC(_params, host) {
 
 function build() {
   const s = getState();
-  // First-run: seed syllabus if empty
-  if (!s.upsc.syllabusTree) {
+  // First-run: seed syllabus if empty · only sriya can seed.
+  if (isOwner() && !s.upsc.syllabusTree) {
     update((d) => { d.upsc.syllabusTree = defaultSyllabusTree(); });
   }
-  if ((s.upsc.sources || []).length === 0) {
+  if (isOwner() && (s.upsc.sources || []).length === 0) {
     update((d) => { d.upsc.sources = DEFAULT_SOURCES.map((x) => ({ ...x, pctDone: 0, stage: '1st-read', completed: false })); });
   }
 
   const wrap = el('div', { class: 'stack' });
   wrap.appendChild(el('h1', null, ['UPSC ', el('i', { class: 'ph-duotone ph-books', style: { color: 'var(--primary)', fontSize: '1.5rem' } })]));
+  if (isCopilot()) wrap.appendChild(viewOnlyBanner('view-only · sriya\'s UPSC prep'));
   wrap.appendChild(el('div', { class: 'row', style: { gap: '6px', flexWrap: 'wrap' } },
     SECTIONS.map((sec) => el('button', {
       class: active === sec.id ? 'chip chip--primary' : 'chip',

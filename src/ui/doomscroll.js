@@ -4,9 +4,10 @@
 //   /doom      · the dashboard: urges log, budget, insights, no-scroll windows
 // And exports openUrgeSheet() called by Mino's panel + a global FAB option.
 
-import { el, clear, openSheet, closeSheet, toast } from '../utils/dom.js';
+import { el, clear, openSheet, closeSheet, toast, viewOnlyBanner } from '../utils/dom.js';
 import { getState, subscribe, update, uid } from '../state.js';
 import { todayKey, relative, fmtMinutes, fmtClock } from '../utils/format.js';
+import { isCopilot, writeGate } from '../auth.js';
 
 const TRIGGERS = [
   { id: 'bored',    label: 'bored',    emoji: '🥱' },
@@ -207,6 +208,8 @@ function buildDash() {
 
   wrap.appendChild(el('h1', null, ['anti-doomscroll ', el('i', { class: 'ph-duotone ph-shield-check', style: { color: 'var(--primary)', fontSize: '1.5rem' } })]));
 
+  if (isCopilot()) wrap.appendChild(viewOnlyBanner('view-only · sriya\'s no-scroll'));
+
   // Today's status
   wrap.appendChild(el('div', { class: 'card card--hero' }, [
     el('div', { class: 'card__title' }, [el('i', { class: 'ph-duotone ph-eye' }), 'today']),
@@ -217,7 +220,10 @@ function buildDash() {
         el('div', { class: 'muted', style: { fontSize: '0.75rem' } }, `of ${fmtMinutes(budget)} budget · ${overBudget ? 'over (no shame)' : 'still ok'}`),
       ]),
       el('div', { class: 'row', style: { gap: '6px' } }, [
-        el('button', { class: 'btn btn--soft', onClick: () => addManualMins() }, '+ log'),
+        el('button', { class: 'btn btn--soft', onClick: () => {
+          if (!writeGate('doomscroll', 'write')) return;
+          addManualMins();
+        } }, '+ log'),
       ]),
     ]),
     el('div', { style: { marginTop: '10px', height: '8px', background: 'var(--surface-2)', borderRadius: '999px', overflow: 'hidden' } }, [

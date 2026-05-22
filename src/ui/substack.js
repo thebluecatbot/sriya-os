@@ -1,9 +1,10 @@
 // Substack / Content · idea inbox · pipeline · draft editor · research locker ·
 // video-blog fields · content calendar · swipe file · repurpose tracker.
 
-import { el, clear, openSheet, closeSheet, toast } from '../utils/dom.js';
+import { el, clear, openSheet, closeSheet, toast, viewOnlyBanner } from '../utils/dom.js';
 import { getState, update, subscribe, uid } from '../state.js';
 import { todayKey, relative, fmtDate } from '../utils/format.js';
+import { isCopilot, writeGate } from '../auth.js';
 
 const STAGES = ['Idea', 'Researching', 'Outlining', 'Drafting', 'Editing', 'Ready', 'Published'];
 
@@ -25,8 +26,13 @@ function build() {
 
   wrap.appendChild(el('div', { class: 'row row--between', style: { alignItems: 'baseline' } }, [
     el('h1', null, ['substack ', el('i', { class: 'ph-duotone ph-pen-nib', style: { color: 'var(--primary)', fontSize: '1.5rem' } })]),
-    el('button', { class: 'btn', onClick: () => createPiece('post') }, [el('i', { class: 'ph-fill ph-plus' }), ' new']),
+    el('button', { class: 'btn', onClick: () => {
+      if (!writeGate('substack', 'write')) return;
+      createPiece('post');
+    } }, [el('i', { class: 'ph-fill ph-plus' }), ' new']),
   ]));
+
+  if (isCopilot()) wrap.appendChild(viewOnlyBanner('view-only · sriya\'s writing'));
 
   // Mode pills
   wrap.appendChild(el('div', { class: 'row', style: { gap: '6px', flexWrap: 'wrap' } }, [

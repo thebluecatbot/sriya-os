@@ -1,12 +1,12 @@
 // App shell wiring: nav active state, sticky activity bar, FAB, "more" drawer.
 
-import { $, $$, el, openSheet, closeSheet } from '../utils/dom.js';
+import { $, $$, el, openSheet, closeSheet, readOnlyize } from '../utils/dom.js';
 import { fmtDuration } from '../utils/format.js';
 import { getState, subscribe } from '../state.js';
 import { openCapture } from './capture.js';
 import { navigate, onRoute } from '../router.js';
 
-import { canAccess } from '../auth.js';
+import { canAccess, isCopilot } from '../auth.js';
 
 // All modules grouped for sidebar + drawer + Today grid
 export const RAW_MODULE_GROUPS = [
@@ -107,10 +107,14 @@ function mountActivityBar() {
   const time  = bar.querySelector('.activity-bar__time');
   const stop  = bar.querySelector('[data-action="stop-timer"]');
 
-  stop.addEventListener('click', async () => {
-    const { stopTimer } = await import('./timer.js');
-    stopTimer();
-  });
+  if (isCopilot()) {
+    readOnlyize(stop, 'view-only · sriya\'s timer');
+  } else {
+    stop.addEventListener('click', async () => {
+      const { stopTimer } = await import('./timer.js');
+      stopTimer();
+    });
+  }
   // Tap the label/time to jump to Timer tab
   label.addEventListener('click', () => { location.hash = '/timer'; });
   time.addEventListener('click',  () => { location.hash = '/timer'; });

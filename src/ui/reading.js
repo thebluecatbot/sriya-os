@@ -1,9 +1,10 @@
 // Reading · media-aware (book/manga/wattpad/comic), shelves, quotes wall,
 // 3-level notes (per-book / per-chapter / per-quote), Open Library auto-fill.
 
-import { el, clear, openSheet, closeSheet, toast } from '../utils/dom.js';
+import { el, clear, openSheet, closeSheet, toast, viewOnlyBanner } from '../utils/dom.js';
 import { getState, update, subscribe, uid } from '../state.js';
 import { todayKey, relative } from '../utils/format.js';
+import { isCopilot, writeGate } from '../auth.js';
 
 const SHELVES = [
   { id: 'reading',  label: 'reading',     icon: 'ph-book-open',    chipColor: 'var(--primary)' },
@@ -38,8 +39,13 @@ function build() {
 
   wrap.appendChild(el('div', { class: 'row row--between', style: { alignItems: 'baseline' } }, [
     el('h1', null, ['reading ', el('i', { class: 'ph-duotone ph-book-open', style: { color: 'var(--primary)', fontSize: '1.5rem' } })]),
-    el('button', { class: 'btn', onClick: () => openAdd() }, [el('i', { class: 'ph-fill ph-plus' }), ' add']),
+    el('button', { class: 'btn', onClick: () => {
+      if (!writeGate('reading', 'write')) return;
+      openAdd();
+    } }, [el('i', { class: 'ph-fill ph-plus' }), ' add']),
   ]));
+
+  if (isCopilot()) wrap.appendChild(viewOnlyBanner('view-only · sriya\'s reading'));
 
   // Shelf pills
   wrap.appendChild(el('div', { class: 'row', style: { gap: '6px', flexWrap: 'wrap' } },

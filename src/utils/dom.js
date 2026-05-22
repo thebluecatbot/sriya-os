@@ -89,3 +89,45 @@ export function closeSheet() {
   document.removeEventListener('keydown', sheetEscHandler);
   setTimeout(() => clear(root), 300);
 }
+
+// Apply read-only style + tap-to-toast feedback to an element. Use when a
+// control should be visible (so prakhar can SEE it exists) but not actionable.
+// Returns the same element so callers can chain.
+//   const btn = el('button', {...}, 'delete');
+//   readOnlyize(btn, 'view-only · sriya\'s space');
+export function readOnlyize(node, reason = 'view-only · sriya\'s space') {
+  if (!node) return node;
+  node.classList.add('is-readonly');
+  node.setAttribute('aria-disabled', 'true');
+  node.dataset.readonly = '';
+  // Capture-phase listener so we win over inner handlers.
+  node.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    e.stopImmediatePropagation?.();
+    toast(reason);
+  }, true);
+  return node;
+}
+
+// Strip a node from the DOM unconditionally. Helper for places where the
+// cleanest read-only UX is to just not render a control at all.
+export function unmount(node) { try { node?.parentNode?.removeChild(node); } catch {} }
+
+// Small "view-only" banner card for personal modules prakhar can browse but
+// not edit. Keeps prakhar oriented without surprising them when a tap toasts.
+export function viewOnlyBanner(reason = 'view-only · sriya\'s space') {
+  return el('div', {
+    class: 'card',
+    style: {
+      background: 'color-mix(in srgb, var(--accent-peach, #FFD7A8) 22%, var(--surface))',
+      border: '1px dashed var(--line)',
+      padding: '8px 12px',
+      fontSize: '0.8rem',
+      color: 'var(--ink-mute)',
+    }
+  }, [
+    el('i', { class: 'ph-duotone ph-eye', style: { marginRight: '6px' } }),
+    reason,
+  ]);
+}

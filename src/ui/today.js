@@ -8,7 +8,7 @@ import { say } from '../mino/voice.js';
 import { nextAction } from '../mino/mascot.js';
 import { openCapture } from './capture.js';
 import { getModuleGroups } from './shell.js';
-import { currentUser } from '../auth.js';
+import { currentUser, writeGate, isCopilot } from '../auth.js';
 
 export function renderToday(_params, host) {
   let unsub = null;
@@ -235,6 +235,7 @@ function nonNegotiablesCard(s) {
       ]);
       row.addEventListener('click', (e) => {
         e.preventDefault();
+        if (!writeGate('nonneg', 'tick')) return;
         const rect = row.querySelector('.check__box').getBoundingClientRect();
         const willBeDone = !ticks[task.id];
         update((d) => {
@@ -272,6 +273,7 @@ function nonNegotiablesCard(s) {
 
 // Quick add sheet · pick category (or new) · label + emoji
 function openAddNonNeg() {
+  if (!writeGate('nonneg', 'edit')) return;
   const s = getState();
   const fLabel = el('input', { class: 'input', placeholder: 'e.g. drink water', autocapitalize: 'off' });
   const fEmoji = el('input', { class: 'input', placeholder: '✿', maxlength: 4, style: { width: '64px' } });

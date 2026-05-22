@@ -5,6 +5,7 @@
 import { el, clear, openSheet, closeSheet, toast } from '../utils/dom.js';
 import { getState, update, subscribe, uid } from '../state.js';
 import { fmtMinutes, todayKey, fmtClock, fmtDate } from '../utils/format.js';
+import { canWrite, isCopilot, writeGate, currentUser } from '../auth.js';
 
 let viewMode = 'week';     // day | week | month
 let cursorDate = todayKey();
@@ -426,7 +427,16 @@ function openEventEdit(existing) {
   const fStart = el('input', { class: 'input', type: 'time', value: e.start });
   const fEnd = el('input', { class: 'input', type: 'time', value: e.end });
 
+  // Prakhar can only edit own events. Block save/delete on Sriya's events.
+  const isOwn = !existing || existing.addedBy === currentUser() || (!existing.addedBy && !isCopilot());
+  const canEditThis = !existing || isOwn || canWrite('calendar', 'edit-others');
+  const canDeleteThis = existing && (isOwn || canWrite('calendar', 'delete-others'));
+
   openSheet(el('div', { class: 'stack' }, [
+    isCopilot() && !isOwn ? el('div', { class: 'card', style: { background: 'color-mix(in srgb, var(--accent-peach, #FFD7A8) 22%, var(--surface))', border: '1px dashed var(--line)', padding: '8px 12px', fontSize: '0.8rem', color: 'var(--ink-mute)' } }, [
+      el('i', { class: 'ph-duotone ph-eye', style: { marginRight: '6px' } }),
+      'view-only · sriya added this',
+    ]) : null,
     el('label', { class: 'field' }, [el('span', { class: 'field__label' }, 'title'), fTitle]),
     el('label', { class: 'field' }, [el('span', { class: 'field__label' }, 'date'), fDate]),
     el('div', { class: 'row', style: { gap: '6px' } }, [
@@ -434,11 +444,13 @@ function openEventEdit(existing) {
       el('label', { class: 'field', style: { flex: 1, margin: 0 } }, [el('span', { class: 'field__label' }, 'end'), fEnd]),
     ]),
     el('div', { class: 'row', style: { gap: '6px' } }, [
-      el('button', { class: 'btn btn--block', onClick: () => {
+      canEditThis ? el('button', { class: 'btn btn--block', onClick: () => {
+        if (!writeGate('calendar', existing ? 'edit-own' : 'add')) return;
         e.title = fTitle.value.trim() || 'untitled';
         e.date = fDate.value;
         e.start = fStart.value;
         e.end = fEnd.value;
+        if (!existing) e.addedBy = currentUser();
         update((d) => {
           d.calendar.events ||= [];
           const i = d.calendar.events.findIndex((x) => x.id === e.id);
@@ -446,8 +458,9 @@ function openEventEdit(existing) {
           else d.calendar.events[i] = e;
         });
         closeSheet(); toast(existing?.title ? 'saved ✓' : 'added ✓');
-      } }, 'save'),
-      existing?.title ? el('button', { class: 'btn btn--ghost', onClick: () => {
+      } }, 'save') : el('button', { class: 'btn btn--block', onClick: () => closeSheet() }, 'close'),
+      canDeleteThis ? el('button', { class: 'btn btn--ghost', onClick: () => {
+        if (!writeGate('calendar', 'delete-own')) return;
         if (!confirm('delete event?')) return;
         update((d) => { d.calendar.events = (d.calendar.events || []).filter((x) => x.id !== e.id); });
         closeSheet();

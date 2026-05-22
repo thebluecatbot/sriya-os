@@ -2,9 +2,10 @@
 // Sticky bar (in shell) reads timer.active. Here we render the full controls,
 // recent log, 24h timeline strip, today's totals, category split, weekly heatmap.
 
-import { el, clear, openSheet, closeSheet, toast } from '../utils/dom.js';
+import { el, clear, openSheet, closeSheet, toast, readOnlyize } from '../utils/dom.js';
 import { getState, update, subscribe, uid } from '../state.js';
 import { fmtDuration, fmtMinutes, todayKey } from '../utils/format.js';
+import { canWrite, isCopilot } from '../auth.js';
 
 export function renderTimer(_params, host) {
   let unsub = null;
@@ -25,6 +26,7 @@ export function renderTimer(_params, host) {
 
 // ─── public actions (used by sticky bar + here) ─────────────
 export function startTimer({ label, categoryId, person, note }) {
+  if (!canWrite('timer', 'start')) { toast('view-only · sriya\'s timer'); return; }
   update((d) => {
     if (d.timer.active) stopActive(d);
     d.timer.active = {
@@ -41,10 +43,12 @@ export function startTimer({ label, categoryId, person, note }) {
 }
 
 export function stopTimer() {
+  if (!canWrite('timer', 'stop')) { toast('view-only · sriya\'s timer'); return; }
   update((d) => stopActive(d));
 }
 
 export function pauseTimer() {
+  if (!canWrite('timer', 'stop')) { toast('view-only · sriya\'s timer'); return; }
   update((d) => {
     const a = d.timer.active;
     if (!a) return;
@@ -141,11 +145,19 @@ function activeCard(s) {
       ]),
     ]),
     el('div', { class: 'row', style: { marginTop: '12px', gap: '6px' } }, [
-      el('button', { class: 'btn btn--soft', onClick: () => pauseTimer() }, [
-        el('i', { class: paused ? 'ph-fill ph-play' : 'ph-fill ph-pause' }),
-        ' ', paused ? 'resume' : 'pause'
-      ]),
-      el('button', { class: 'btn', onClick: () => stopTimer() }, [el('i', { class: 'ph-fill ph-stop-circle' }), ' stop & log']),
+      (() => {
+        const b = el('button', { class: 'btn btn--soft', onClick: () => pauseTimer() }, [
+          el('i', { class: paused ? 'ph-fill ph-play' : 'ph-fill ph-pause' }),
+          ' ', paused ? 'resume' : 'pause'
+        ]);
+        if (isCopilot()) readOnlyize(b, 'view-only · sriya\'s timer');
+        return b;
+      })(),
+      (() => {
+        const b = el('button', { class: 'btn', onClick: () => stopTimer() }, [el('i', { class: 'ph-fill ph-stop-circle' }), ' stop & log']);
+        if (isCopilot()) readOnlyize(b, 'view-only · sriya\'s timer');
+        return b;
+      })(),
     ]),
   ]);
 }
