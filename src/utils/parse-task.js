@@ -14,14 +14,16 @@ export function parseTask(s) {
   };
 
   const lower = s.toLowerCase();
+  out.explicitWhen = false;  // set true if user explicitly typed a date word
 
-  if (/\b(today|aaj|ee\s?roju)\b/.test(lower))         { out.due = todayISO(0); out.category = 'Today'; out.priority = 'today'; }
-  else if (/\b(tomorrow|kal|repu)\b/.test(lower))       { out.due = todayISO(1); out.category = 'Soon'; }
-  else if (/\b(day after|parson|ellundi)\b/.test(lower)){ out.due = todayISO(2); out.category = 'Soon'; }
-  else if (/\b(next week|agle hafte|next vaaram)\b/.test(lower)) { out.due = todayISO(7); out.category = 'Soon'; }
+  if (/\b(today|aaj|ee\s?roju)\b/.test(lower))         { out.due = todayISO(0); out.category = 'Today'; out.priority = 'today'; out.explicitWhen = true; }
+  else if (/\b(tomorrow|kal|repu)\b/.test(lower))       { out.due = todayISO(1); out.category = 'Soon'; out.explicitWhen = true; }
+  else if (/\b(day after|parson|ellundi)\b/.test(lower)){ out.due = todayISO(2); out.category = 'Soon'; out.explicitWhen = true; }
+  else if (/\b(next week|agle hafte|next vaaram)\b/.test(lower)) { out.due = todayISO(7); out.category = 'Soon'; out.explicitWhen = true; }
   else if (/\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday|som|mangal|budh|guru|shukra|shani|raviv)\b/.test(lower)) {
     out.due = nextWeekdayISO(lower);
     out.category = 'Soon';
+    out.explicitWhen = true;
   }
 
   const m1 = lower.match(/(\d+)\s*(min|m|minute)/);
@@ -29,8 +31,8 @@ export function parseTask(s) {
   const m2 = lower.match(/(\d+)\s*(h|hr|hour)/);
   if (m2) out.estMins = (out.estMins || 0) + parseInt(m2[1], 10) * 60;
 
-  if (/\b(urgent|asap|abhi|imm)\b/.test(lower))          out.priority = 'today';
-  else if (/\b(someday|kabhi|whenever|maybe)\b/.test(lower)) { out.priority = 'someday'; out.category = 'Someday'; }
+  if (/\b(urgent|asap|abhi|imm)\b/.test(lower))          { out.priority = 'today'; out.explicitWhen = true; }
+  else if (/\b(someday|kabhi|whenever|maybe)\b/.test(lower)) { out.priority = 'someday'; out.category = 'Someday'; out.explicitWhen = true; }
 
   if (/\b(heavy|deep|focus|hard|tough|mushkil)\b/.test(lower)) out.energy = 'heavy';
   else if (/\b(light|quick|easy|chhota|chinna)\b/.test(lower))  out.energy = 'light';

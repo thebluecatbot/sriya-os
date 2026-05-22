@@ -16,7 +16,7 @@ function tomorrowKey() {
   return d.toISOString().slice(0, 10);
 }
 
-const BUCKETS = ['Today', 'Soon', 'Someday', 'Done'];
+const BUCKETS = ['Dashboard', 'Today', 'Soon', 'Someday', 'Done'];
 
 let activeBucket = 'Today';
 
@@ -61,6 +61,16 @@ function buildTasks() {
     })
   );
   wrap.appendChild(tabRow);
+
+  // Dashboard view: Today / Soon / Someday side-by-side with their own
+  // quick-add inputs so tasks land where the user expects.
+  if (activeBucket === 'Dashboard') {
+    wrap.appendChild(mainThingCard(s));
+    wrap.appendChild(dashboardSections(s));
+    wrap.appendChild(recurringCard(s));
+    wrap.appendChild(nonNegotiablesCard(s));
+    return wrap;
+  }
 
   // The one main thing for today
   if (activeBucket === 'Today') wrap.appendChild(mainThingCard(s));
@@ -145,21 +155,37 @@ function pickMainThing() {
   ]), { title: 'the one main thing' });
 }
 
-function quickAddRow() {
+function quickAddRow(bucketOverride) {
+  // bucketOverride lets per-section quick-add (Dashboard) drop a task into the
+  // section it's under. When called from a real bucket tab, the active tab
+  // wins. parseTask hashtags can still override.
+  const targetBucket = bucketOverride || (activeBucket !== 'Dashboard' && activeBucket !== 'Done' ? activeBucket : 'Today');
+  const ph = targetBucket === 'Today' ? 'add to today · "kal call amma 20min"'
+           : targetBucket === 'Soon' ? 'add to soon · this week-ish'
+           : targetBucket === 'Someday' ? 'add to someday · maybe later'
+           : 'add a task';
   const input = el('input', {
-    class: 'input', type: 'text',
-    placeholder: 'add a task · "kal call amma 20min #social"',
+    class: 'input', type: 'text', placeholder: ph,
     'aria-label': 'Quick add task',
   });
   function doAdd() {
     const v = input.value.trim();
     if (!v) return;
     const p = parseTask(v);
+    // Use parseTask's bucket only if user explicitly wrote a #hashtag mapping.
+    // Otherwise default to the tab/section the user is in.
+    const priorityMap = { Today: 'today', Soon: 'soon', Someday: 'someday' };
+    // Respect parseTask only when the user explicitly typed a date/time word
+    // (e.g. "kal call amma"). Otherwise the active tab/section wins. This
+    // fixes the "can't add stuff to Soon/Someday" bug — parseTask defaults
+    // to Today when nothing matches.
+    const finalCategory = p.explicitWhen ? p.category : targetBucket;
+    const finalPriority = p.explicitWhen ? p.priority : (priorityMap[targetBucket] || p.priority);
     update((d) => {
       d.tasks.negotiable.unshift({
         id: uid('t'), type: 'negotiable',
-        title: p.title, emoji: p.emoji || '', category: p.category, due: p.due,
-        estMins: p.estMins, priority: p.priority, energy: p.energy || 'light',
+        title: p.title, emoji: p.emoji || '', category: finalCategory, due: p.due,
+        estMins: p.estMins, priority: finalPriority, energy: p.energy || 'light',
         person: 'sriya', subtasks: [], status: 'open',
         linkedModule: p.linkedModule || null,
         createdAt: new Date().toISOString(),
@@ -167,13 +193,42 @@ function quickAddRow() {
       });
     });
     input.value = '';
-    toast('added ✓');
+    toast(`added to ${targetBucket} ✓`);
   }
   input.addEventListener('keydown', (e) => { if (e.key === 'Enter') doAdd(); });
   return el('div', { class: 'row', style: { gap: '8px' } }, [
     input,
     el('button', { class: 'btn', onClick: doAdd, 'aria-label': 'Add' }, [el('i', { class: 'ph-fill ph-plus' })]),
   ]);
+}
+
+// Dashboard view: Today / Soon / Someday columns (vertical sections on mobile).
+// Each section has its own quick-add wired to its bucket + a scrollable list.
+function dashboardSections(s) {
+  const sections = ['Today', 'Soon', 'Someday'];
+  const meta = {
+    Today:   { icon: 'ph-sun',    blurb: 'do these now' },
+    Soon:    { icon: 'ph-clock',  blurb: 'this week' },
+    Someday: { icon: 'ph-moon',   blurb: 'when there\'s space' },
+  };
+  return el('div', { class: 'stack' }, sections.map((bucket) => {
+    const list = tasksInBucket(s, bucket);
+    const m = meta[bucket];
+    return el('div', { class: 'card' }, [
+      el('div', { class: 'card__title' }, [
+        el('i', { class: `ph-duotone ${m.icon}`, style: { color: 'var(--primary)' } }),
+        bucket.toLowerCase(),
+        el('small', null, `${list.length} · ${m.blurb}`),
+      ]),
+      quickAddRow(bucket),
+      list.length === 0
+        ? el('p', { class: 'muted', style: { margin: '8px 0 0', fontSize: '0.8rem' } }, 'nothing here yet ✿')
+        : el('div', {
+            class: 'stack',
+            style: { marginTop: '8px', maxHeight: '320px', overflowY: 'auto', paddingRight: '2px' },
+          }, list.map((t) => taskCard(t, s))),
+    ]);
+  }));
 }
 
 function emptyStateCard(bucket) {
