@@ -73,12 +73,42 @@ function allModulesCard() {
 function greetingCard(s) {
   const time = fmtClock();
   const tod = timeOfDay();
-  const hello = say(`greet_${tod === 'afternoon' ? 'afternoon' : tod === 'morning' ? 'morning' : tod === 'evening' ? 'evening' : 'night'}`);
+  const me = currentUser();
+  const today = todayKey();
+
+  // Personalized hello.
+  const isPrakhar = me === 'prakhar';
+  const hello = isPrakhar
+    ? `welcome, prakhar ★`
+    : say(`greet_${tod === 'afternoon' ? 'afternoon' : tod === 'morning' ? 'morning' : tod === 'evening' ? 'evening' : 'night'}`);
+
+  // For Prakhar: a "what Sriya is up to" subline drawn from her recent activity.
+  let subline = fmtDate();
+  if (isPrakhar) {
+    const sriyaTodayTasks = (s.tasks?.negotiable || [])
+      .filter((t) => (t.addedBy === 'sriya' || !t.addedBy) && t.status !== 'done')
+      .slice(0, 3);
+    const sriyaDoneToday = (s.doneJar?.byDate?.[today] || [])
+      .filter((j) => j.addedBy === 'sriya' || !j.addedBy);
+    const journalToday = !!(s.journal?.byDate?.[today]?.body);
+    const moodToday = (s.health?.moodLog || []).filter((m) => (m.date || '').slice(0, 10) === today).slice(-1)[0];
+
+    const bits = [];
+    if (sriyaTodayTasks.length) bits.push(`${sriyaTodayTasks.length} task${sriyaTodayTasks.length > 1 ? 's' : ''} on her plate`);
+    if (sriyaDoneToday.length)  bits.push(`${sriyaDoneToday.length} done today`);
+    if (journalToday)           bits.push('journaled today');
+    if (moodToday?.mood)        bits.push(`mood: ${moodToday.mood}`);
+
+    subline = bits.length
+      ? `check out what sriya is doing · ${bits.join(' · ')}`
+      : `check out what sriya is doing · she hasn't logged anything yet today ✿`;
+  }
+
   return el('div', { class: 'card card--hero' }, [
     el('div', { class: 'greeting' }, [
       el('div', null, [
         el('h1', null, hello),
-        el('p', { class: 'muted', style: { margin: '4px 0 0' } }, fmtDate()),
+        el('p', { class: 'muted', style: { margin: '4px 0 0' } }, subline),
       ]),
       el('div', { class: 'clock' }, [el('span', { dataset: { clock: '' } }, time)]),
     ]),

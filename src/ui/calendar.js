@@ -84,19 +84,32 @@ function shift(dir) {
 // All events at a given date (calendar.events + derived from tasks)
 function eventsOn(s, date) {
   const out = [...(s.calendar.events || []).filter((e) => e.date === date)];
-  // Derive from scheduled negotiable tasks
+  // Derive from negotiable tasks · TWO inclusion paths:
+  //   1. scheduledAt has a time on this date  → place at that time
+  //   2. due === date (no scheduledAt)         → place at 09:00 as a soft default
+  //   3. priority === 'today' and date === today and no due → today fallback
+  const tToday = todayKey();
   for (const t of s.tasks.negotiable) {
-    if (t.scheduledAt && t.scheduledAt.slice(0, 10) === date && t.status !== 'done') {
-      out.push({
-        id: `task-${t.id}`,
-        title: t.title,
-        date,
-        start: t.scheduledAt.slice(11, 16),
-        end: addMinutes(t.scheduledAt.slice(11, 16), t.completionTimerMins || t.estMins || 30),
-        sourceModule: 'task', sourceId: t.id,
-        color: 'var(--primary)',
-      });
+    if (t.status === 'done') continue;
+    let start = null, end = null;
+    if (t.scheduledAt && t.scheduledAt.slice(0, 10) === date) {
+      start = t.scheduledAt.slice(11, 16);
+      end = addMinutes(start, t.completionTimerMins || t.estMins || 30);
+    } else if (!t.scheduledAt && t.due === date) {
+      start = '09:00';
+      end = addMinutes(start, t.completionTimerMins || t.estMins || 30);
+    } else if (!t.scheduledAt && !t.due && t.priority === 'today' && date === tToday) {
+      start = '09:00';
+      end = addMinutes(start, t.estMins || 30);
     }
+    if (!start) continue;
+    out.push({
+      id: `task-${t.id}`,
+      title: t.title,
+      date, start, end,
+      sourceModule: 'task', sourceId: t.id,
+      color: 'var(--primary)',
+    });
   }
   return out.sort((a, b) => (a.start || '').localeCompare(b.start || ''));
 }

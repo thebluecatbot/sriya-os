@@ -383,15 +383,31 @@ function stopPeriodicPull() {
   if (_pullTimer) { clearTimeout(_pullTimer); _pullTimer = null; }
 }
 
-// One subscription per session. Realtime delivers row-change notifications;
-// on each one we immediately runPull() to merge the new server state.
+// One subscription per session. Realtime sends the full new row in the
+// payload — we apply it DIRECTLY, no refetch. That's the difference between
+// ~100ms (push only) and ~1s (push + re-fetch).
 let _realtimeUnsub = null;
 async function ensureRealtimeSubscription() {
   if (_realtimeUnsub) return;
   try {
-    _realtimeUnsub = await subscribeStateChanges(NS, () => {
-      // Server says the row changed · fetch the freshest snapshot and merge.
-      if (!_isPulling && !_isSyncing) runPull();
+    _realtimeUnsub = await subscribeStateChanges(NS, (payload) => {
+      const incoming = payload?.new?.state;
+      if (!incoming || typeof incoming !== 'object') return;
+      // Merge incoming into local. deepMerge handles arrays by id-union and
+      // is safe against partial payloads. Skip if nothing actually changed.
+      const merged = deepMerge(_state, incoming);
+      const before = JSON.stringify(_state);
+      const after = JSON.stringify(merged);
+      if (before === after) return;
+      _state = merged;
+      // Take the more recent updated_at so subsequent pulls can short-circuit.
+      const remoteTs = payload?.new?.updated_at;
+      if (remoteTs) _state.updatedAt = remoteTs;
+      saveLocal(_state);
+      notify();
+      // Mark this version as already-pushed so we don't echo it back up.
+      _lastPushedJSON = JSON.stringify(_state);
+      emitSyncStatus('ok');
     });
   } catch (e) {
     console.warn('[realtime] subscribe failed', e?.message);
