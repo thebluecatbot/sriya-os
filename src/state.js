@@ -162,6 +162,17 @@ function deepMerge(a, b) {
   return b === undefined ? a : b;
 }
 
+// Per-device "live" state that should never be clobbered by a remote merge
+// just because the other device didn't know about it. Currently: the running
+// timer.active. Call after any deepMerge that produces a new candidate state.
+function preserveLiveLocalState(localState, mergedCandidate, incomingState) {
+  if (localState?.timer?.active && !incomingState?.timer?.active) {
+    mergedCandidate.timer = mergedCandidate.timer || {};
+    mergedCandidate.timer.active = localState.timer.active;
+  }
+  return mergedCandidate;
+}
+
 // Pick the latest known timestamp on an item (createdAt / completedAt / etc).
 function itemTimestamp(item) {
   if (!item || typeof item !== 'object') return 0;
@@ -312,7 +323,8 @@ async function syncToNeon() {
     // This is what prevents "user A overwrites user B" data loss.
     const remote = await loadFromNeon();
     if (remote) {
-      const merged = deepMerge(_state, remote);
+      let merged = deepMerge(_state, remote);
+      merged = preserveLiveLocalState(_state, merged, remote);
       const before = JSON.stringify(_state);
       const after = JSON.stringify(merged);
       if (before !== after) {
@@ -396,6 +408,10 @@ async function ensureRealtimeSubscription() {
       // Merge incoming into local. deepMerge handles arrays by id-union and
       // is safe against partial payloads. Skip if nothing actually changed.
       const merged = deepMerge(_state, incoming);
+      // Preserve per-device 'live' state (active timer) — see helper above.
+      const merged2 = preserveLiveLocalState(_state, merged, incoming);
+      // (Note: keeping `merged` name below for diff clarity)
+      Object.assign(merged, merged2);
       const before = JSON.stringify(_state);
       const after = JSON.stringify(merged);
       if (before === after) return;
@@ -429,7 +445,8 @@ async function runPull() {
   try {
     const remote = await loadFromNeon();
     if (remote) {
-      const merged = deepMerge(_state, remote);
+      let merged = deepMerge(_state, remote);
+      merged = preserveLiveLocalState(_state, merged, remote);
       const before = JSON.stringify(_state);
       const after = JSON.stringify(merged);
       if (before !== after) {

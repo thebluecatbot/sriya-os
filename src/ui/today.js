@@ -27,11 +27,91 @@ export function renderToday(_params, host) {
   host.addEventListener('beforerouted', () => { unsub && unsub(); clearInterval(interval); }, { once: true });
 }
 
+// Live activity feed of Sriya's day · only shown to Prakhar. Pulls from existing
+// state slices (tasks, doneJar, journal, mood, timer.log, water) and renders
+// the most recent ~12 events sorted newest-first. Updates live via Realtime
+// because it's a derived view of state that's already being re-painted by
+// subscribe().
+function sriyaActivityCard(s) {
+  const events = [];
+  const today = todayKey();
+  // Tasks added by Sriya
+  for (const t of (s.tasks?.negotiable || [])) {
+    if (t.addedBy && t.addedBy !== 'sriya') continue;
+    if (t.createdAt) events.push({ at: t.createdAt, kind: 'task-add', label: `added task · ${t.title}` });
+    if (t.completedAt) events.push({ at: t.completedAt, kind: 'task-done', label: `finished · ${t.title}` });
+  }
+  // Done-jar wins today
+  for (const j of (s.doneJar?.byDate?.[today] || [])) {
+    if (j.addedBy && j.addedBy !== 'sriya') continue;
+    events.push({ at: j.at, kind: 'done', label: `${j.kind === 'task' ? 'finished' : 'ticked'} · ${j.label}` });
+  }
+  // Journal entries
+  for (const day of Object.keys(s.journal?.byDate || {})) {
+    const entry = s.journal.byDate[day];
+    if (entry?.body && entry?.savedAt) events.push({ at: entry.savedAt, kind: 'journal', label: `journaled · ${entry.body.slice(0, 60)}${entry.body.length > 60 ? '…' : ''}` });
+  }
+  // Mood + sleep + meal logs
+  for (const m of (s.health?.moodLog || [])) if (m.at) events.push({ at: m.at, kind: 'mood', label: `mood · ${m.mood || m.label || ''}` });
+  for (const m of (s.health?.sleepLog || []).slice(-5)) if (m.at) events.push({ at: m.at, kind: 'sleep', label: `slept ${m.hours || m.h || '?'}h` });
+  for (const m of (s.health?.mealLog || []).slice(-5)) if (m.at) events.push({ at: m.at, kind: 'meal', label: `meal · ${m.label || m.note || ''}` });
+  // Timer log
+  for (const t of (s.timer?.log || []).slice(0, 8)) {
+    if (t.person && t.person !== 'sriya') continue;
+    events.push({ at: t.end || t.start, kind: 'timer', label: `${t.mins}min · ${t.label || t.categoryId || 'work'}` });
+  }
+  // Sort newest first, take top 12
+  events.sort((a, b) => (b.at || '').localeCompare(a.at || ''));
+  const top = events.slice(0, 12);
+
+  const iconFor = (k) => ({
+    'task-add': 'ph-plus-circle',
+    'task-done': 'ph-check-circle',
+    'done': 'ph-confetti',
+    'journal': 'ph-notebook',
+    'mood': 'ph-heart',
+    'sleep': 'ph-moon',
+    'meal': 'ph-bowl-food',
+    'timer': 'ph-timer',
+  })[k] || 'ph-sparkle';
+
+  return el('div', { class: 'card' }, [
+    el('div', { class: 'card__title' }, [
+      el('i', { class: 'ph-duotone ph-broadcast', 'aria-hidden': 'true', style: { color: 'var(--primary)' } }),
+      'what sriya\'s up to',
+      el('small', null, top.length ? `${top.length} updates` : 'no activity yet today'),
+    ]),
+    top.length === 0
+      ? el('p', { class: 'muted' }, 'her day hasn\'t started yet ✿')
+      : el('div', { class: 'stack', style: { gap: '6px' } },
+          top.map((e) => el('div', { class: 'row', style: { gap: '8px', alignItems: 'flex-start', padding: '4px 0', borderBottom: '1px dashed var(--line)' } }, [
+            el('i', { class: `ph-duotone ${iconFor(e.kind)}`, 'aria-hidden': 'true', style: { color: 'var(--primary)', flexShrink: 0, marginTop: '2px' } }),
+            el('div', { style: { flex: 1, minWidth: 0 } }, [
+              el('div', { style: { fontSize: '0.85rem' } }, e.label),
+              el('div', { class: 'muted', style: { fontSize: '0.65rem' } }, fmtRelative(e.at)),
+            ]),
+          ]))
+        ),
+  ]);
+}
+
+function fmtRelative(iso) {
+  if (!iso) return '';
+  const ms = Date.now() - Date.parse(iso);
+  if (Number.isNaN(ms)) return '';
+  if (ms < 60_000) return 'just now';
+  if (ms < 3600_000) return `${Math.floor(ms / 60_000)}m ago`;
+  if (ms < 86_400_000) return `${Math.floor(ms / 3600_000)}h ago`;
+  return `${Math.floor(ms / 86_400_000)}d ago`;
+}
+
 function buildToday() {
   const s = getState();
   const wrap = el('div', { class: 'stack' });
 
   wrap.appendChild(greetingCard(s));
+  // Prakhar-only: live activity feed of what Sriya's been doing today.
+  if (currentUser() === 'prakhar') wrap.appendChild(sriyaActivityCard(s));
   wrap.appendChild(nonNegotiablesCard(s));
   wrap.appendChild(topTasksCard(s));
   wrap.appendChild(medsCard(s));
