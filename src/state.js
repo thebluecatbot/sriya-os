@@ -140,44 +140,36 @@ let _state = null;
 let _pendingPersist = null;
 let _pendingSync = null;
 
-// Deep merge that UNIONS arrays of objects by their `id` field.
-// Keyed-object structures (tickLog, byDate, mainThingByDate) are still merged
-// as plain objects — the keys themselves are the identifiers there.
-function deepMerge(a, b) {
-  // Both arrays · union by id, newer wins on conflict
-  if (Array.isArray(a) && Array.isArray(b)) {
-    return unionArraysById(a, b);
-  }
-  // One is array, other missing · take whichever exists (prefer b)
-  if (Array.isArray(a) || Array.isArray(b)) {
-    return b ?? a;
-  }
-  // Both objects · recurse on union of keys
-  if (a && typeof a === 'object' && b && typeof b === 'object') {
-    const out = { ...a };
-    for (const k of Object.keys(b)) out[k] = deepMerge(a[k], b[k]);
-    return out;
-  }
-  // Primitives · b wins unless undefined
-  return b === undefined ? a : b;
-}
+// ──────────────────────────────────────────────────────────────
+// Recency-aware merge.
+//
+// Bug fixed here (v25): the previous deepMerge always preferred `b` on a
+// primitive conflict, and unionArraysById broke timestamp ties by preferring
+// `b`. Every sync path called deepMerge(_state, remote) with `_state` as `a`
+// and `remote` as `b` — so a freshly edited LOCAL value would lose to the
+// STALE remote copy that hadn't seen the edit yet, snapping the UI back.
+//
+// New rules (mergeStates(local, remote)):
+//   · Objects carrying their own `updatedAt`: the side with the newer
+//     updatedAt wins for primitive fields; objects/arrays still recurse.
+//   · Arrays of objects with `id`: union by id; on the same id, mergeNode
+//     resolves field-by-field (newer wins). On a genuine tie, LOCAL wins.
+//   · Primitive arrays (no id-bearing objects): union with dedup, never
+//     drop a value present on either side.
+//   · Primitives with no timestamp context: prefer LOCAL, never silently
+//     prefer remote.
+//   · Items/keys present on only one side are always kept.
+//
+// Edits stop reverting because update() now stamps a fresh updatedAt on the
+// section + item that changed (see stampChanges). The stale remote copy has
+// an older updatedAt, so local wins by recency, not by tie-break.
+// ──────────────────────────────────────────────────────────────
 
-// Per-device "live" state that should never be clobbered by a remote merge
-// just because the other device didn't know about it. Currently: the running
-// timer.active. Call after any deepMerge that produces a new candidate state.
-function preserveLiveLocalState(localState, mergedCandidate, incomingState) {
-  if (localState?.timer?.active && !incomingState?.timer?.active) {
-    mergedCandidate.timer = mergedCandidate.timer || {};
-    mergedCandidate.timer.active = localState.timer.active;
-  }
-  return mergedCandidate;
-}
-
-// Pick the latest known timestamp on an item (createdAt / completedAt / etc).
-function itemTimestamp(item) {
-  if (!item || typeof item !== 'object') return 0;
-  const candidates = [item.updatedAt, item.editedAt, item.completedAt,
-                      item.modifiedAt, item.at, item.time, item.createdAt, item.date];
+// Pick the latest known timestamp on an item / section.
+function tsOf(obj) {
+  if (!obj || typeof obj !== 'object') return 0;
+  const candidates = [obj.updatedAt, obj.editedAt, obj.modifiedAt,
+                      obj.completedAt, obj.at, obj.time, obj.createdAt, obj.date];
   for (const c of candidates) {
     if (!c) continue;
     const ts = Date.parse(c);
@@ -186,33 +178,241 @@ function itemTimestamp(item) {
   return 0;
 }
 
-// Union of two arrays of objects keyed by `id`. Newer wins where both have
-// the same id. Arrays whose items have no `id` fall back to old behaviour.
-function unionArraysById(a, b) {
-  const aIdable = a.some((x) => x && typeof x === 'object' && 'id' in x);
-  const bIdable = b.some((x) => x && typeof x === 'object' && 'id' in x);
-  if (!aIdable && !bIdable) return b ?? a;
+// Entry point: merge our local state with a remote state, recency-aware,
+// then apply soft-delete tombstones. local-wins-on-tie throughout.
+function mergeStates(local, remote) {
+  if (local == null) return remote;
+  if (remote == null) return local;
+  const merged = mergeNode(local, remote, 'local');
+  // Merge tombstone dicts (newer ISO string wins per key).
+  const lt = local._tombstones || {};
+  const rt = remote._tombstones || {};
+  const tomb = { ...lt };
+  for (const k of Object.keys(rt)) {
+    if (!tomb[k] || rt[k] > tomb[k]) tomb[k] = rt[k];
+  }
+  if (Object.keys(tomb).length > 0) merged._tombstones = tomb;
+  return applyTombstones(merged);
+}
+
+function mergeNode(local, remote, inheritedSide) {
+  if (local === undefined) return remote;
+  if (remote === undefined) return local;
+
+  // Null is treated as "absent" only when the other side has an object/array
+  // (so re-setting a field back to null on one device requires that side to
+  // be the newer one — same rule as any other field update).
+  if (local === null && remote === null) return null;
+  if (local === null && (Array.isArray(remote) || (typeof remote === 'object'))) {
+    return inheritedSide === 'remote' ? remote : local;
+  }
+  if (remote === null && (Array.isArray(local) || (typeof local === 'object'))) {
+    return inheritedSide === 'remote' ? remote : local;
+  }
+
+  if (Array.isArray(local) && Array.isArray(remote)) {
+    return mergeArraysById(local, remote);
+  }
+  if (Array.isArray(local) || Array.isArray(remote)) {
+    return local;  // type mismatch — keep local
+  }
+
+  if (local && typeof local === 'object' && remote && typeof remote === 'object') {
+    const lTs = tsOf(local);
+    const rTs = tsOf(remote);
+    let newer;
+    if (lTs > rTs) newer = 'local';
+    else if (rTs > lTs) newer = 'remote';
+    else newer = inheritedSide;            // tie → inherit (defaults to 'local')
+
+    const out = {};
+    const keys = new Set([...Object.keys(local), ...Object.keys(remote)]);
+    for (const k of keys) {
+      const lv = local[k];
+      const rv = remote[k];
+      if (lv === undefined) { out[k] = rv; continue; }
+      if (rv === undefined) { out[k] = lv; continue; }
+      const lIsObj = lv && typeof lv === 'object';
+      const rIsObj = rv && typeof rv === 'object';
+      if (lIsObj || rIsObj) {
+        out[k] = mergeNode(lv, rv, newer);
+      } else {
+        // primitive conflict: pick by `newer`. tie/no-info default = local.
+        out[k] = newer === 'remote' ? rv : lv;
+      }
+    }
+    return out;
+  }
+
+  // Both primitives at this depth (no parent updatedAt info): keep local.
+  return local;
+}
+
+function mergeArraysById(local, remote) {
+  // Both sides id-bearing? Use byId union with per-item recency merge.
+  const anyIds = (arr) => arr.some((x) => x && typeof x === 'object' && 'id' in x);
+  if (!anyIds(local) && !anyIds(remote)) {
+    // Primitive arrays (strings/numbers): union with dedup so additions
+    // from either device survive.
+    if (local.every((x) => typeof x !== 'object') && remote.every((x) => typeof x !== 'object')) {
+      const seen = new Set();
+      const out = [];
+      for (const v of local) if (!seen.has(v)) { seen.add(v); out.push(v); }
+      for (const v of remote) if (!seen.has(v)) { seen.add(v); out.push(v); }
+      return out;
+    }
+    return local;
+  }
 
   const byId = new Map();
   const orphans = [];
-  const pushItem = (item, side) => {
-    if (item && typeof item === 'object' && 'id' in item) {
-      const existing = byId.get(item.id);
-      if (!existing) {
-        byId.set(item.id, item);
-      } else {
-        // Pick newer by timestamp; tie · prefer b (later-arriving) for deterministic merge.
-        const tA = itemTimestamp(existing);
-        const tB = itemTimestamp(item);
-        byId.set(item.id, tB >= tA ? item : existing);
-      }
-    } else {
-      orphans.push(item);
+  for (const it of local) {
+    if (it && typeof it === 'object' && 'id' in it) byId.set(it.id, it);
+    else orphans.push(it);
+  }
+  for (const it of remote) {
+    if (it && typeof it === 'object' && 'id' in it) {
+      const existing = byId.get(it.id);
+      if (!existing) byId.set(it.id, it);
+      else byId.set(it.id, mergeNode(existing, it, 'local'));
     }
-  };
-  for (const item of a) pushItem(item, 'a');
-  for (const item of b) pushItem(item, 'b');
+    // remote orphans (id-less): drop — no way to dedupe safely
+  }
   return [...byId.values(), ...orphans];
+}
+
+// After a recency-aware merge, filter out items whose id has a tombstone
+// that's newer than the item itself. (An edit newer than the delete wins.)
+function applyTombstones(state) {
+  const tomb = state._tombstones;
+  if (!tomb || Object.keys(tomb).length === 0) return state;
+
+  function walk(node) {
+    if (Array.isArray(node)) {
+      const kept = [];
+      for (const it of node) {
+        if (it && typeof it === 'object' && 'id' in it) {
+          const tombTs = tomb[it.id];
+          if (tombTs) {
+            const itemTs = tsOf(it);
+            if (itemTs <= Date.parse(tombTs)) continue;  // tombstone wins → drop
+          }
+        }
+        kept.push(walk(it));
+      }
+      return kept;
+    }
+    if (node && typeof node === 'object') {
+      const out = {};
+      for (const k of Object.keys(node)) out[k] = walk(node[k]);
+      return out;
+    }
+    return node;
+  }
+
+  return walk(state);
+}
+
+// Per-device "live" state that should never be clobbered by a remote merge
+// just because the other device didn't know about it. Currently: the running
+// timer.active. With recency-aware merge this is largely a belt-and-braces.
+function preserveLiveLocalState(localState, mergedCandidate, incomingState) {
+  if (localState?.timer?.active && !incomingState?.timer?.active) {
+    mergedCandidate.timer = mergedCandidate.timer || {};
+    mergedCandidate.timer.active = localState.timer.active;
+  }
+  return mergedCandidate;
+}
+
+// ──────────────────────────────────────────────────────────────
+// Auto-stamp updatedAt on the section / item / array that just changed,
+// and auto-tombstone any item that vanished from an array. Runs inside
+// update() so existing UI handlers don't need to know about timestamps.
+// ──────────────────────────────────────────────────────────────
+
+const STAMP_SKIP_KEYS = new Set([
+  'updatedAt', 'createdAt', 'lastTouched', 'schemaVersion', '_tombstones',
+]);
+
+function stampChanges(before, draft, now) {
+  if (!draft || typeof draft !== 'object') return;
+  if (!before || typeof before !== 'object') {
+    // First materialisation — stamp every section we have.
+    for (const k of Object.keys(draft)) {
+      const v = draft[k];
+      if (v && typeof v === 'object' && !Array.isArray(v) && !v.updatedAt) v.updatedAt = now;
+    }
+    return;
+  }
+  walkAndStamp(before, draft, draft, now);
+}
+
+function walkAndStamp(beforeObj, draftObj, top, now) {
+  // Track if any key under draftObj changed; caller stamps own updatedAt.
+  for (const k of Object.keys(draftObj)) {
+    if (STAMP_SKIP_KEYS.has(k)) continue;
+    const bv = beforeObj?.[k];
+    const dv = draftObj[k];
+    if (Array.isArray(dv)) {
+      if (!Array.isArray(bv)) continue;          // brand-new array — leave as-is
+      if (JSON.stringify(bv) === JSON.stringify(dv)) continue;
+      stampArrayChanges(bv, dv, top, now);
+      // Find the containing object (draftObj) and bump its updatedAt too
+      if (draftObj !== top && !STAMP_SKIP_KEYS.has('updatedAt')) {
+        draftObj.updatedAt = now;
+      }
+    } else if (dv && typeof dv === 'object') {
+      if (!bv || typeof bv !== 'object') {
+        // brand new sub-object
+        dv.updatedAt = now;
+        continue;
+      }
+      if (JSON.stringify(bv) === JSON.stringify(dv)) continue;
+      // Stamp this object then recurse for deeper nested ones.
+      dv.updatedAt = now;
+      walkAndStamp(bv, dv, top, now);
+    } else {
+      // primitive — if it differs, bump the parent's updatedAt
+      if (bv !== dv && draftObj !== top) {
+        draftObj.updatedAt = now;
+      }
+    }
+  }
+  // Keys removed from draftObj entirely (rare): bump parent updatedAt
+  for (const k of Object.keys(beforeObj)) {
+    if (STAMP_SKIP_KEYS.has(k)) continue;
+    if (!(k in draftObj) && draftObj !== top) {
+      draftObj.updatedAt = now;
+    }
+  }
+}
+
+function stampArrayChanges(beforeArr, draftArr, top, now) {
+  // Build before-by-id and draft-by-id.
+  const beforeById = new Map();
+  for (const it of beforeArr) {
+    if (it && typeof it === 'object' && 'id' in it) beforeById.set(it.id, it);
+  }
+  const draftIds = new Set();
+  for (const it of draftArr) {
+    if (it && typeof it === 'object' && 'id' in it) {
+      draftIds.add(it.id);
+      const prev = beforeById.get(it.id);
+      if (!prev) {
+        if (!it.createdAt) it.createdAt = now;
+        if (!it.updatedAt) it.updatedAt = now;
+      } else if (JSON.stringify(prev) !== JSON.stringify(it)) {
+        it.updatedAt = now;
+      }
+    }
+  }
+  // Items that disappeared from the array → tombstone.
+  for (const [id] of beforeById) {
+    if (!draftIds.has(id)) {
+      top._tombstones = top._tombstones || {};
+      top._tombstones[id] = now;
+    }
+  }
 }
 
 function loadLocal() {
@@ -246,11 +446,16 @@ function notify() {
 // arrow expressions like `(d) => d.x.push(y)` return a number (push() length)
 // and would otherwise corrupt state.
 export function update(mutator, { silent = false } = {}) {
-  const draft = JSON.parse(JSON.stringify(_state));
+  const before = _state ? JSON.parse(JSON.stringify(_state)) : null;
+  const draft = _state ? JSON.parse(JSON.stringify(_state)) : {};
   const res = mutator(draft);
-  _state = (res && typeof res === 'object' && !Array.isArray(res)) ? res : draft;
-  // Auto-stamp every change so remote-vs-local merge is reliable.
-  _state.updatedAt = new Date().toISOString();
+  const next = (res && typeof res === 'object' && !Array.isArray(res)) ? res : draft;
+  const now = new Date().toISOString();
+  // Stamp section/item updatedAts + auto-tombstone deletions BEFORE we set
+  // the top-level updatedAt — the merge layer needs that per-section info.
+  stampChanges(before, next, now);
+  next.updatedAt = now;
+  _state = next;
   if (!silent) notify();
   schedulePersist();
 }
@@ -323,13 +528,13 @@ async function syncToNeon() {
     // This is what prevents "user A overwrites user B" data loss.
     const remote = await loadFromNeon();
     if (remote) {
-      let merged = deepMerge(_state, remote);
+      let merged = mergeStates(_state, remote);
       merged = preserveLiveLocalState(_state, merged, remote);
       const before = JSON.stringify(_state);
       const after = JSON.stringify(merged);
       if (before !== after) {
         _state = merged;
-        // Keep updatedAt as max of both sides (or now, if we are publishing)
+        // Keep updatedAt as max of both sides (we may be about to publish).
         const lTs = Date.parse(before && JSON.parse(before).updatedAt || 0) || 0;
         const rTs = Date.parse(remote.updatedAt || 0) || 0;
         _state.updatedAt = new Date(Math.max(lTs, rTs, Date.now())).toISOString();
@@ -405,20 +610,19 @@ async function ensureRealtimeSubscription() {
     _realtimeUnsub = await subscribeStateChanges(NS, (payload) => {
       const incoming = payload?.new?.state;
       if (!incoming || typeof incoming !== 'object') return;
-      // Merge incoming into local. deepMerge handles arrays by id-union and
-      // is safe against partial payloads. Skip if nothing actually changed.
-      const merged = deepMerge(_state, incoming);
-      // Preserve per-device 'live' state (active timer) — see helper above.
-      const merged2 = preserveLiveLocalState(_state, merged, incoming);
-      // (Note: keeping `merged` name below for diff clarity)
-      Object.assign(merged, merged2);
+      // Recency-aware merge. Local wins on ties so a freshly-edited local
+      // value is never reverted by a stale incoming payload.
+      let merged = mergeStates(_state, incoming);
+      merged = preserveLiveLocalState(_state, merged, incoming);
       const before = JSON.stringify(_state);
       const after = JSON.stringify(merged);
       if (before === after) return;
       _state = merged;
-      // Take the more recent updated_at so subsequent pulls can short-circuit.
+      // Take the newer of local/remote updated_at so subsequent pulls can short-circuit.
       const remoteTs = payload?.new?.updated_at;
-      if (remoteTs) _state.updatedAt = remoteTs;
+      const lTs = Date.parse(_state.updatedAt) || 0;
+      const rTs = Date.parse(remoteTs) || 0;
+      if (rTs > lTs) _state.updatedAt = remoteTs;
       saveLocal(_state);
       notify();
       // Mark this version as already-pushed so we don't echo it back up.
@@ -445,7 +649,7 @@ async function runPull() {
   try {
     const remote = await loadFromNeon();
     if (remote) {
-      let merged = deepMerge(_state, remote);
+      let merged = mergeStates(_state, remote);
       merged = preserveLiveLocalState(_state, merged, remote);
       const before = JSON.stringify(_state);
       const after = JSON.stringify(merged);
@@ -487,7 +691,7 @@ if (typeof window !== 'undefined') {
     if (!ev.newValue) return;
     try {
       const incoming = JSON.parse(ev.newValue);
-      const merged = deepMerge(_state, incoming);
+      const merged = mergeStates(_state, incoming);
       if (JSON.stringify(_state) !== JSON.stringify(merged)) {
         _state = merged;
         notify();
@@ -531,9 +735,10 @@ const _syncQueue = [];
 
 export async function initState() {
   // 1) Load local instantly so the UI can paint right away (never freeze).
+  //    mergeStates(local, defaults) keeps local on every conflict; defaults
+  //    only fills in missing keys (e.g. a new section added in a later release).
   const local = loadLocal();
-  _state = local ? deepMerge(defaults(), local) : defaults();
-  const lTs0 = Date.parse(local?.updatedAt || local?.lastTouched || 0) || 0;
+  _state = local ? mergeStates(local, defaults()) : defaults();
   notify();
 
   // 2) Pull from remote in the background. The sync gate stays closed until
@@ -550,19 +755,16 @@ export async function initState() {
   loadFromNeon().then((remote) => {
     clearTimeout(safetyOpen);
     if (remote) {
-      const rTs = Date.parse(remote.updatedAt || remote.lastTouched || 0) || 0;
-      // Take remote when it's at least as new as the local we already loaded.
-      if (rTs >= lTs0) {
-        _state = deepMerge(defaults(), remote);
+      // Always merge against the CURRENT _state (not just defaults) so any
+      // edits the user made during the init pull window survive.
+      const merged = mergeStates(_state, remote);
+      if (JSON.stringify(merged) !== JSON.stringify(_state)) {
+        _state = merged;
         saveLocal(_state);
         notify();
         console.log(`[sync] merged remote · tasks=${_state.tasks?.negotiable?.length || 0}`);
       } else {
-        console.log('[sync] local newer · pushing up');
-        _initialMergeDone = true;
-        scheduleSync();
-        flushSyncQueueIfAny();
-        return;
+        console.log('[sync] remote matches local · no change');
       }
     } else {
       console.log('[sync] no remote · keeping local');
@@ -592,13 +794,12 @@ export async function syncNow() {
   await new Promise(r => setTimeout(r, 800));
   const remote = await loadFromNeon();
   if (remote) {
-    const localTs = Date.parse(_state?.updatedAt || 0) || 0;
-    const remoteTs = Date.parse(remote.updatedAt || 0) || 0;
-    if (remoteTs > localTs) {
-      _state = deepMerge(defaults(), remote);
+    const merged = mergeStates(_state, remote);
+    if (JSON.stringify(merged) !== JSON.stringify(_state)) {
+      _state = merged;
       saveLocal(_state);
       notify();
-      return { ok: true, action: 'pulled remote' };
+      return { ok: true, action: 'merged remote' };
     }
   }
   return { ok: true, action: 'pushed local' };
@@ -629,7 +830,8 @@ export function exportAll() {
 
 export function importAll(payload) {
   if (!payload || !payload.state) throw new Error('Bad import: missing .state');
-  _state = deepMerge(defaults(), payload.state);
+  // Import wins: treat payload as "local" so it beats defaults on every conflict.
+  _state = mergeStates(payload.state, defaults());
   saveLocal(_state);
   notify();
   scheduleSync();
